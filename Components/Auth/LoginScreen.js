@@ -33,8 +33,8 @@ const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: 'staff2@example.com',
+    password: 'password123'
   });
   
   const [loading, setLoading] = useState(false);
@@ -177,9 +177,9 @@ const LoginScreen = ({ navigation }) => {
         }
 
         // Store auth token and user data
-        if (result.data.token) {
-          await AsyncStorage.setItem('userToken', result.data.token);
-          await AsyncStorage.setItem('userData', JSON.stringify(result.data.user));
+        if (result.token) {
+          await AsyncStorage.setItem('userToken', result.token);
+          await AsyncStorage.setItem('userData', JSON.stringify(result.user));
         }
 
         Alert.alert(
@@ -197,15 +197,18 @@ const LoginScreen = ({ navigation }) => {
             }
           ]
         );
+        // Replace the navigation line in handleLogin success:
+// navigation.navigate('Dashboard');
+navigation.navigate('MainBottomTabs');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         
-        if (result.errors) {
-          setErrors(result.errors);
+        if (result.message) {
+          setErrors(result.message);
         } else {
           Alert.alert(
             translate('loginError'),
-            result.error || translate('invalidCredentials')
+            result.message || translate('invalidCredentials')
           );
         }
       }

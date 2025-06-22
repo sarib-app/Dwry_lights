@@ -179,6 +179,38 @@ export const translations = {
     balanceDue: 'Balance Due',
     receivedBy: 'Received By',
     authorizedSignature: 'Authorized Signature',
+
+    //Bottom Navigatuion
+    // In English section:
+insights: 'Insights',
+actions: 'Actions',
+
+//Auth stack language settere
+selectLanguage: 'Select Language',
+choosePreferred: 'Choose your preferred language',
+continue: 'Continue',
+
+//Action screen
+
+items: 'Items',
+inventory: 'Inventory',
+categories: 'Categories',
+customers: 'Customers',
+staff: 'Staff',
+suppliers: 'Suppliers',
+'sales invoice': 'Sales Invoice',
+'purchase orders': 'Purchase Orders',
+expenses: 'Expenses',
+payments: 'Payments',
+reports: 'Reports',
+territories: 'Territories',
+quotations: 'Quotations',
+returns: 'Returns',
+corebusiness: 'Core Business',
+peoplemanagement: 'People Management',
+financial: 'Financial',
+operations: 'Operations',
+
   },
 
   ar: {
@@ -355,6 +387,37 @@ export const translations = {
     balanceDue: 'الرصيد المستحق',
     receivedBy: 'استلم بواسطة',
     authorizedSignature: 'التوقيع المخول',
+
+    
+    // Bottom Nav:
+insights: 'الإحصائيات',
+
+//Auth stack language settere
+actions: 'الإجراءات',selectLanguage: 'اختر اللغة',
+choosePreferred: 'اختر لغتك المفضلة',
+continue: 'متابعة',
+
+//Action Screen
+
+items: 'العناصر',
+inventory: 'المخزون',
+categories: 'الفئات',
+customers: 'العملاء',
+staff: 'الموظفين',
+suppliers: 'الموردين',
+'sales invoice': 'فاتورة مبيعات',
+'purchase orders': 'أوامر الشراء',
+expenses: 'المصروفات',
+payments: 'المدفوعات',
+reports: 'التقارير',
+territories: 'المناطق',
+quotations: 'عروض الأسعار',
+returns: 'المرتجعات',
+corebusiness: 'الأعمال الأساسية',
+peoplemanagement: 'إدارة الأشخاص',
+financial: 'المالية',
+operations: 'العمليات',
+
   }
 };
 
