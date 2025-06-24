@@ -55,7 +55,11 @@ if (actionTitle === 'Inventory') {
   navigation.navigate('InventoryManagement');
 } else if (actionTitle === 'Items') {
   navigation.navigate('ItemManagement');
-}else {
+}
+ else if (actionTitle === 'Customers') {
+  navigation.navigate('CustomerManagement');
+}
+else {
     Alert.alert(
       actionTitle,
       'Coming Soon!',
