@@ -14,6 +14,9 @@ import EditInventoryScreen from '../Inventory/InventroyScreen';
 import CustomerManagementScreen from '../CustomerManagment/CustomerManagment';
 import AddCustomerScreen from '../CustomerManagment/AddCustomer';
 import EditCustomerScreen from '../CustomerManagment/EditCustomer';
+import SupplierManagementScreen from '../SupplierManagment/SupplierManagmentScreen';
+import AddSupplierScreen from '../SupplierManagment/AddSupplierScreen';
+import EditSupplierScreen from '../SupplierManagment/EditSupplierScreen';
 
 const Stack = createStackNavigator();
 
@@ -38,7 +41,9 @@ const AuthStack = () => {
        <Stack.Screen name="AddCustomer" component={AddCustomerScreen} options={{ headerShown: false }}  /> 
        <Stack.Screen name="EditCustomer" component={EditCustomerScreen} options={{ headerShown: false }} />
 
-
+<Stack.Screen name="SupplierManagement" component={SupplierManagementScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddSupplier" component={AddSupplierScreen} options={{ headerShown: false }} />
+<Stack.Screen name="EditSupplier" component={EditSupplierScreen} options={{ headerShown: false }} />
 
    
 

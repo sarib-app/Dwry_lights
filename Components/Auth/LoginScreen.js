@@ -177,9 +177,9 @@ const LoginScreen = ({ navigation }) => {
         }
 
         // Store auth token and user data
-        if (result.token) {
-          await AsyncStorage.setItem('userToken', result.token);
-          await AsyncStorage.setItem('userData', JSON.stringify(result.user));
+        if (result.data.token) {
+          await AsyncStorage.setItem('userToken', result.data.token);
+          await AsyncStorage.setItem('userData', JSON.stringify(result.data.user));
         }
 
         Alert.alert(

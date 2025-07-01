@@ -15,62 +15,48 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 import languageService from '../Globals/Store/Lang';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
-const AddCustomerScreen = ({ navigation }) => {
+const AddSupplierScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
-    territory: '',
-    customer_type: '',
-    address_contact: '',
-    lat: '',
-    long: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    supplier_type: '',
+    payment_terms: '',
+    credit_limit: '',
+    tax_number: '',
     added_by: '',
   });
   const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [showTerritoryPicker, setShowTerritoryPicker] = useState(false);
-  const [showTypePicker, setShowTypePicker] = useState(false);
-  const [userId, setUserId] = useState('');
+  const [showSupplierTypePicker, setShowSupplierTypePicker] = useState(false);
+  const [showPaymentTermsPicker, setShowPaymentTermsPicker] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
 
   const translate = (key) => languageService.translate(key);
 
-  // Predefined territories (you can customize these)
-  const territories = [
-    'Eastern Region',
-    'Western Region',
-    'Central Region',
-    'Northern Region',
-    'Southern Region',
-    'Riyadh Province',
-    'Makkah Province',
-    'Madinah Province',
-    'Qassim Province',
-    'Hail Province',
+  // Predefined options
+  const supplierTypes = ['Local', 'International', 'Distributor', 'Manufacturer'];
+  const paymentTerms = ['Cash', 'Net 15', 'Net 30', 'Net 45', 'Net 60', 'Net 90', 'COD'];
+  const saudiCities = [
+    'Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Dhahran',
+    'Taif', 'Abha', 'Tabuk', 'Buraidah', 'Khamis Mushait', 'Hail', 'Hofuf',
+    'Jubail', 'Hafar Al-Batin', 'Yanbu', 'Qatif', 'Sakaka', 'Jazan'
   ];
 
-  // Customer types
-  const customerTypes = [
-    'Retail',
-    'Wholesale',
-    'Corporate',
-    'Individual',
-    'Distributor',
-    'Reseller',
-  ];
-
-  // Get auth token and user ID from AsyncStorage
+  // Get auth data from AsyncStorage
   const getAuthData = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken')
       const userIdFromStorage = await AsyncStorage.getItem('userId');
       
       if (userIdFromStorage) {
-        setUserId(userIdFromStorage);
         setFormData(prev => ({ ...prev, added_by: userIdFromStorage }));
       }
       
@@ -95,59 +81,26 @@ const AddCustomerScreen = ({ navigation }) => {
     }));
   };
 
-  // Get current location
-  const getCurrentLocation = async () => {
-    setLocationLoading(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Location permission is required to get your current location.');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-      
-      // Get address from coordinates
-      const address = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      if (address.length > 0) {
-        const addr = address[0];
-        const fullAddress = `${addr.street || ''} ${addr.streetNumber || ''}, ${addr.city || ''}, ${addr.region || ''}, ${addr.country || ''}`.trim();
-        
-        setFormData(prev => ({
-          ...prev,
-          lat: latitude.toString(),
-          long: longitude.toString(),
-          address_contact: fullAddress,
-        }));
-        
-        Alert.alert('Success', 'Location captured successfully!');
-      }
-    } catch (error) {
-      console.error('Location error:', error);
-      Alert.alert('Error', 'Failed to get current location');
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
   // Validate form
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Validation Error', 'Customer name is required');
+      Alert.alert('Validation Error', 'Supplier name is required');
       return false;
     }
-    if (!formData.territory.trim()) {
-      Alert.alert('Validation Error', 'Territory is required');
+    if (!formData.contact_person.trim()) {
+      Alert.alert('Validation Error', 'Contact person is required');
       return false;
     }
-    if (!formData.customer_type.trim()) {
-      Alert.alert('Validation Error', 'Customer type is required');
+    if (!formData.phone.trim()) {
+      Alert.alert('Validation Error', 'Phone number is required');
+      return false;
+    }
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
+      return false;
+    }
+    if (formData.credit_limit && isNaN(formData.credit_limit)) {
+      Alert.alert('Validation Error', 'Credit limit must be a valid number');
       return false;
     }
     return true;
@@ -169,15 +122,19 @@ const AddCustomerScreen = ({ navigation }) => {
       const payload = {
         name: formData.name,
         name_ar: formData.name_ar,
-        territory: formData.territory,
-        customer_type: formData.customer_type,
-        address_contact: formData.address_contact,
-        lat: parseFloat(formData.lat) || 0,
-        long: parseFloat(formData.long) || 0,
+        contact_person: formData.contact_person,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        supplier_type: formData.supplier_type,
+        payment_terms: formData.payment_terms,
+        credit_limit: parseFloat(formData.credit_limit) || 0,
+        tax_number: formData.tax_number,
         added_by: parseInt(formData.added_by) || 1,
       };
 
-      const response = await fetch(`${API_BASE_URL}/add_customer`, {
+      const response = await fetch(`${API_BASE_URL}/add_supplier`, {
         method: 'POST',
         headers: {
           'Authorization': token,
@@ -187,12 +144,12 @@ const AddCustomerScreen = ({ navigation }) => {
       });
 
       const result = await response.json();
-      console.log('Add customer response:', result);
+      console.log('Add supplier response:', result);
 
       if (result.status == 200) {
         Alert.alert(
           'Success',
-          'Customer added successfully!',
+          'Supplier added successfully!',
           [
             {
               text: 'OK',
@@ -201,11 +158,11 @@ const AddCustomerScreen = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Error', result.message || 'Failed to add customer');
+        Alert.alert('Error', result.message || 'Failed to add supplier');
       }
     } catch (error) {
-      console.error('Add customer error:', error);
-      Alert.alert('Error', 'Network error while adding customer');
+      console.error('Add supplier error:', error);
+      Alert.alert('Error', 'Network error while adding supplier');
     } finally {
       setLoading(false);
     }
@@ -234,7 +191,7 @@ const AddCustomerScreen = ({ navigation }) => {
             >
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Add New Customer</Text>
+            <Text style={styles.headerTitle}>Add New Supplier</Text>
             <View style={styles.placeholder} />
           </View>
         </LinearGradient>
@@ -247,115 +204,140 @@ const AddCustomerScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Basic Information</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Customer Name *</Text>
+            <Text style={styles.label}>Supplier Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter customer name"
+              placeholder="Enter supplier name"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Customer Name (Arabic)</Text>
+            <Text style={styles.label}>Supplier Name (Arabic)</Text>
             <TextInput
               style={styles.input}
-              placeholder="أدخل اسم العميل"
+              placeholder="أدخل اسم المورد"
               value={formData.name_ar}
               onChangeText={(value) => handleInputChange('name_ar', value)}
               textAlign="right"
             />
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contact Person *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter contact person name"
+              value={formData.contact_person}
+              onChangeText={(value) => handleInputChange('contact_person', value)}
+            />
+          </View>
         </View>
 
-        {/* Territory & Type */}
+        {/* Contact Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Classification</Text>
+          <Text style={styles.sectionTitle}>Contact Information</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Territory *</Text>
+            <Text style={styles.label}>Phone Number *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="+966 50 123 4567"
+              value={formData.phone}
+              onChangeText={(value) => handleInputChange('phone', value)}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="supplier@company.com"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange('email', value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>City</Text>
             <TouchableOpacity
               style={styles.selector}
-              onPress={() => setShowTerritoryPicker(true)}
+              onPress={() => setShowCityPicker(true)}
             >
-              <Text style={[styles.selectorText, !formData.territory && styles.placeholder]}>
-                {formData.territory || 'Select territory'}
+              <Text style={[styles.selectorText, !formData.city && styles.placeholder]}>
+                {formData.city || 'Select city'}
               </Text>
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Customer Type *</Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => setShowTypePicker(true)}
-            >
-              <Text style={[styles.selectorText, !formData.customer_type && styles.placeholder]}>
-                {formData.customer_type || 'Select customer type'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Location & Address */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location & Address</Text>
-          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Enter customer address"
-              value={formData.address_contact}
-              onChangeText={(value) => handleInputChange('address_contact', value)}
+              placeholder="Enter complete address"
+              value={formData.address}
+              onChangeText={(value) => handleInputChange('address', value)}
               multiline
               numberOfLines={3}
             />
           </View>
+        </View>
 
-          <View style={styles.locationSection}>
-            <Text style={styles.label}>GPS Coordinates</Text>
-            
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.subLabel}>Latitude</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0.0000"
-                  value={formData.lat}
-                  onChangeText={(value) => handleInputChange('lat', value)}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.subLabel}>Longitude</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0.0000"
-                  value={formData.long}
-                  onChangeText={(value) => handleInputChange('long', value)}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-
+        {/* Business Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Business Information</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Supplier Type</Text>
             <TouchableOpacity
-              style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
-              onPress={getCurrentLocation}
-              disabled={locationLoading}
+              style={styles.selector}
+              onPress={() => setShowSupplierTypePicker(true)}
             >
-              {locationLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="location" size={20} color="#fff" />
-              )}
-              <Text style={styles.locationButtonText}>
-                {locationLoading ? 'Getting Location...' : 'Get Current Location'}
+              <Text style={[styles.selectorText, !formData.supplier_type && styles.placeholder]}>
+                {formData.supplier_type || 'Select supplier type'}
               </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Payment Terms</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setShowPaymentTermsPicker(true)}
+            >
+              <Text style={[styles.selectorText, !formData.payment_terms && styles.placeholder]}>
+                {formData.payment_terms || 'Select payment terms'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Credit Limit</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              value={formData.credit_limit}
+              onChangeText={(value) => handleInputChange('credit_limit', value)}
+              keyboardType="decimal-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tax Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter tax/VAT number"
+              value={formData.tax_number}
+              onChangeText={(value) => handleInputChange('tax_number', value)}
+              keyboardType="numeric"
+            />
           </View>
         </View>
 
@@ -386,7 +368,7 @@ const AddCustomerScreen = ({ navigation }) => {
           ) : (
             <>
               <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.submitButtonText}>Add Customer</Text>
+              <Text style={styles.submitButtonText}>Add Supplier</Text>
             </>
           )}
         </TouchableOpacity>
@@ -394,28 +376,28 @@ const AddCustomerScreen = ({ navigation }) => {
         <View style={styles.bottomSpace} />
       </ScrollView>
 
-      {/* Territory Picker Modal */}
+      {/* Supplier Type Picker Modal */}
       <Modal
-        visible={showTerritoryPicker}
+        visible={showSupplierTypePicker}
         animationType="slide"
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Territory</Text>
+            <Text style={styles.modalTitle}>Select Supplier Type</Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setShowTerritoryPicker(false)}
+              onPress={() => setShowSupplierTypePicker(false)}
             >
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
           
           <FlatList
-            data={territories}
-            renderItem={({ item }) => renderPickerItem(item, (territory) => {
-              handleInputChange('territory', territory);
-              setShowTerritoryPicker(false);
+            data={supplierTypes}
+            renderItem={({ item }) => renderPickerItem(item, (type) => {
+              handleInputChange('supplier_type', type);
+              setShowSupplierTypePicker(false);
             })}
             keyExtractor={(item) => item}
             style={styles.pickerList}
@@ -424,28 +406,58 @@ const AddCustomerScreen = ({ navigation }) => {
         </SafeAreaView>
       </Modal>
 
-      {/* Customer Type Picker Modal */}
+      {/* Payment Terms Picker Modal */}
       <Modal
-        visible={showTypePicker}
+        visible={showPaymentTermsPicker}
         animationType="slide"
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Customer Type</Text>
+            <Text style={styles.modalTitle}>Select Payment Terms</Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setShowTypePicker(false)}
+              onPress={() => setShowPaymentTermsPicker(false)}
             >
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
           
           <FlatList
-            data={customerTypes}
-            renderItem={({ item }) => renderPickerItem(item, (type) => {
-              handleInputChange('customer_type', type);
-              setShowTypePicker(false);
+            data={paymentTerms}
+            renderItem={({ item }) => renderPickerItem(item, (terms) => {
+              handleInputChange('payment_terms', terms);
+              setShowPaymentTermsPicker(false);
+            })}
+            keyExtractor={(item) => item}
+            style={styles.pickerList}
+            showsVerticalScrollIndicator={false}
+          />
+        </SafeAreaView>
+      </Modal>
+
+      {/* City Picker Modal */}
+      <Modal
+        visible={showCityPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select City</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCityPicker(false)}
+            >
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <FlatList
+            data={saudiCities}
+            renderItem={({ item }) => renderPickerItem(item, (city) => {
+              handleInputChange('city', city);
+              setShowCityPicker(false);
             })}
             keyExtractor={(item) => item}
             style={styles.pickerList}
@@ -521,12 +533,6 @@ const styles = StyleSheet.create({
     color: '#555',
     marginBottom: 8,
   },
-  subLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 5,
-  },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -558,36 +564,6 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: '#999',
-  },
-  locationSection: {
-    marginTop: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  locationButton: {
-    backgroundColor: '#3498DB',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  locationButtonDisabled: {
-    backgroundColor: '#95A5A6',
-  },
-  locationButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   submitButton: {
     backgroundColor: '#6B7D3D',
@@ -669,4 +645,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddCustomerScreen;
+export default AddSupplierScreen;

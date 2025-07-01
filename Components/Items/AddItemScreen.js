@@ -15,13 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import languageService from '../Globals/Store/Lang';
+import getAuthToken from '../Globals/Store/LocalData';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
-const AUTH_TOKEN = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
+const token = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
 
 const AddItemScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    inventory_id: '2', // Default inventory ID
+    // inventory_id: '2', // Default inventory ID
     name: '',
     name_ar: '',
     qty: '',
@@ -93,6 +94,9 @@ const AddItemScreen = ({ navigation }) => {
 
   // Submit form
   const handleSubmit = async () => {
+    const token = await getAuthToken()
+
+    if(token)
     if (!validateForm()) return;
 
     setLoading(true);
@@ -117,7 +121,7 @@ const AddItemScreen = ({ navigation }) => {
       const response = await fetch(`${API_BASE_URL}/add_item`, {
         method: 'POST',
         headers: {
-          'Authorization': AUTH_TOKEN,
+          'Authorization': token,
           'Content-Type': 'multipart/form-data',
         },
         body: formDataToSend,
@@ -211,7 +215,7 @@ const AddItemScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Inventory & Quantity</Text>
           
           <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+            {/* <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>Inventory ID</Text>
               <TextInput
                 style={styles.input}
@@ -220,7 +224,7 @@ const AddItemScreen = ({ navigation }) => {
                 onChangeText={(value) => handleInputChange('inventory_id', value)}
                 keyboardType="numeric"
               />
-            </View>
+            </View> */}
 
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={styles.label}>Quantity *</Text>

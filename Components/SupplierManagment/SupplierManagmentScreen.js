@@ -18,20 +18,18 @@ import languageService from '../Globals/Store/Lang';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
-const CustomerManagementScreen = ({ navigation }) => {
-  const [customers, setCustomers] = useState([]);
+const SupplierManagementScreen = ({ navigation }) => {
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('userToken')
       if (token) {
         return `Bearer ${token}`;
       }
@@ -41,8 +39,8 @@ const CustomerManagementScreen = ({ navigation }) => {
     return null;
   };
 
-  // Fetch all customers with pagination
-  const fetchCustomers = async (page = 1, append = false) => {
+  // Fetch all suppliers
+  const fetchSuppliers = async () => {
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -50,7 +48,7 @@ const CustomerManagementScreen = ({ navigation }) => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/fetch_all_customers?page=${page}`, {
+      const response = await fetch(`${API_BASE_URL}/fetch_all_suppliers`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -58,44 +56,27 @@ const CustomerManagementScreen = ({ navigation }) => {
       });
       
       const result = await response.json();
-      console.log('Customers API Response:', result);
+      console.log('Suppliers API Response:', result);
       
       if (result.status == 200) {
-        const newCustomers = result.data?.data || [];
-        if (append) {
-          setCustomers(prev => [...prev, ...newCustomers]);
-        } else {
-          setCustomers(newCustomers);
-        }
-        
-        // Check if there's more data
-        setHasMoreData(result.data?.next_page_url != null);
+        setSuppliers(result.data || []);
       } else {
-        Alert.alert('Error', result.message || 'Failed to fetch customers');
+        Alert.alert('Error', result.message || 'Failed to fetch suppliers');
       }
     } catch (error) {
-      console.error('Fetch customers error:', error);
-      Alert.alert('Error', 'Network error while fetching customers');
+      console.error('Fetch suppliers error:', error);
+      Alert.alert('Error', 'Network error while fetching suppliers');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // Load more customers
-  const loadMoreCustomers = () => {
-    if (hasMoreData && !loading) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      fetchCustomers(nextPage, true);
-    }
-  };
-
-  // Delete customer
-  const deleteCustomer = async (customerId) => {
+  // Delete supplier
+  const deleteSupplier = async (supplierId) => {
     Alert.alert(
-      'Delete Customer',
-      'Are you sure you want to delete this customer?',
+      'Delete Supplier',
+      'Are you sure you want to delete this supplier?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -106,7 +87,7 @@ const CustomerManagementScreen = ({ navigation }) => {
               const token = await getAuthToken();
               if (!token) return;
 
-              const response = await fetch(`${API_BASE_URL}/delete_customer/${customerId}`, {
+              const response = await fetch(`${API_BASE_URL}/delete_supplier_by_id/${supplierId}`, {
                 method: 'POST',
                 headers: {
                   'Authorization': token,
@@ -116,14 +97,14 @@ const CustomerManagementScreen = ({ navigation }) => {
               const result = await response.json();
               
               if (result.status == 200) {
-                Alert.alert('Success', 'Customer deleted successfully');
-                fetchCustomers(); // Refresh the list
+                Alert.alert('Success', 'Supplier deleted successfully');
+                fetchSuppliers(); // Refresh the list
               } else {
-                Alert.alert('Error', result.message || 'Failed to delete customer');
+                Alert.alert('Error', result.message || 'Failed to delete supplier');
               }
             } catch (error) {
-              console.error('Delete customer error:', error);
-              Alert.alert('Error', 'Network error while deleting customer');
+              console.error('Delete supplier error:', error);
+              Alert.alert('Error', 'Network error while deleting supplier');
             }
           },
         },
@@ -131,115 +112,158 @@ const CustomerManagementScreen = ({ navigation }) => {
     );
   };
 
-  // Filter customers based on search query
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.name_ar?.includes(searchQuery) ||
-    customer.territory?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.customer_type?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter suppliers based on search query
+  const filteredSuppliers = suppliers.filter(supplier =>
+    supplier.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    supplier.name_ar?.includes(searchQuery) ||
+    supplier.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    supplier.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    supplier.supplier_type?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setCurrentPage(1);
-    fetchCustomers(1);
+    fetchSuppliers();
   }, []);
 
   useEffect(() => {
-    fetchCustomers();
+    fetchSuppliers();
   }, []);
 
   // Calculate stats
   const calculateStats = () => {
-    const territoryCount = new Set(customers.map(c => c.territory)).size;
-    const typeCount = new Set(customers.map(c => c.customer_type)).size;
+    const totalCreditLimit = suppliers.reduce((sum, supplier) => sum + (supplier.credit_limit || 0), 0);
+    const activeSuppliers = suppliers.filter(s => s.status !== 'inactive').length;
+    const supplierTypes = new Set(suppliers.map(s => s.supplier_type)).size;
+    
     return {
-      totalCustomers: customers.length,
-      territories: territoryCount,
-      types: typeCount,
+      totalSuppliers: suppliers.length,
+      activeSuppliers,
+      totalCreditLimit,
+      supplierTypes,
     };
   };
 
   const stats = calculateStats();
 
-  // Get customer type color
-  const getCustomerTypeColor = (type) => {
+  // Get supplier type color
+  const getSupplierTypeColor = (type) => {
     const colors = {
-      'Retail': '#E74C3C',
-      'Wholesale': '#3498DB',
-      'Corporate': '#9B59B6',
-      'Individual': '#27AE60',
+      'Local': '#27AE60',
+      'International': '#3498DB',
+      'Distributor': '#9B59B6',
+      'Manufacturer': '#E67E22',
     };
     return colors[type] || '#95A5A6';
   };
 
-  // Render customer card
-  const renderCustomerCard = (customer) => (
-    <View key={customer.id} style={styles.customerCard}>
-        <Text>
-            {customer.name}
-        </Text>
-      {/* <View style={styles.customerHeader}>
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{customer.name}</Text>
-          {customer.name_ar && <Text style={styles.customerNameAr}>{customer.name_ar}</Text>}
+  // Get status color
+  const getStatusColor = (status) => {
+    return status === 'active' ? '#27AE60' : '#E74C3C';
+  };
+
+  // Render supplier card
+  const renderSupplierCard = (supplier) => (
+    <View key={supplier.id} style={styles.supplierCard}>
+      <View style={styles.supplierHeader}>
+        <View style={styles.supplierInfo}>
+          <View style={styles.nameContainer}>
+            <Text style={styles.supplierName}>{supplier.name}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(supplier.status) }]}>
+              <Text style={styles.statusText}>
+                {supplier.status === 'active' ? 'Active' : 'Inactive'}
+              </Text>
+            </View>
+          </View>
+          {supplier.name_ar && <Text style={styles.supplierNameAr}>{supplier.name_ar}</Text>}
         </View>
-        <View style={styles.customerActions}>
+        <View style={styles.supplierActions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.editButton]}
-            onPress={() => navigation.navigate('EditCustomer', { customer })}
+            onPress={() => navigation.navigate('EditSupplier', { supplier })}
           >
             <Ionicons name="pencil" size={16} color="#6B7D3D" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteCustomer(customer.id)}
+            onPress={() => deleteSupplier(supplier.id)}
           >
             <Ionicons name="trash" size={16} color="#E74C3C" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.customerDetails}>
+      <View style={styles.contactSection}>
+        <View style={styles.contactRow}>
+          <Ionicons name="person" size={16} color="#666" />
+          <Text style={styles.contactText}>{supplier.contact_person}</Text>
+        </View>
+        
+        {supplier.phone && (
+          <TouchableOpacity style={styles.contactRow}>
+            <Ionicons name="call" size={16} color="#666" />
+            <Text style={styles.contactText}>{supplier.phone}</Text>
+          </TouchableOpacity>
+        )}
+        
+        {supplier.email && (
+          <TouchableOpacity style={styles.contactRow}>
+            <Ionicons name="mail" size={16} color="#666" />
+            <Text style={styles.contactText}>{supplier.email}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.supplierDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="location" size={16} color="#666" />
-          <Text style={styles.detailText} numberOfLines={1}>
-            {customer.territory || 'No territory'}
-          </Text>
+          <Text style={styles.detailText}>{supplier.city || 'No city'}</Text>
         </View>
         <View style={styles.detailRow}>
-          <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
-          <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
+          <View style={[styles.typeIndicator, { backgroundColor: getSupplierTypeColor(supplier.supplier_type) }]} />
+          <Text style={styles.detailText}>{supplier.supplier_type || 'No type'}</Text>
         </View>
       </View>
 
-      {customer.address_contact && (
-        <Text style={styles.customerAddress} numberOfLines={2}>
-          {customer.address_contact}
+      {supplier.address && (
+        <Text style={styles.supplierAddress} numberOfLines={2}>
+          📍 {supplier.address}
         </Text>
       )}
 
-      {(customer.lat && customer.long) && (
-        <TouchableOpacity style={styles.locationButton}>
-          <Ionicons name="map" size={16} color="#3498DB" />
-          <Text style={styles.locationText}>
-            {customer.lat.toFixed(4)}, {customer.long.toFixed(4)}
+      <View style={styles.businessInfo}>
+        <View style={styles.businessRow}>
+          <Text style={styles.businessLabel}>Payment Terms:</Text>
+          <Text style={styles.businessValue}>{supplier.payment_terms || 'Not set'}</Text>
+        </View>
+        
+        <View style={styles.businessRow}>
+          <Text style={styles.businessLabel}>Credit Limit:</Text>
+          <Text style={styles.businessValue}>
+            {supplier.credit_limit ? `$${supplier.credit_limit.toLocaleString()}` : 'Not set'}
           </Text>
-        </TouchableOpacity>
-      )}
+        </View>
+        
+        {supplier.tax_number && (
+          <View style={styles.businessRow}>
+            <Text style={styles.businessLabel}>Tax Number:</Text>
+            <Text style={styles.businessValue}>{supplier.tax_number}</Text>
+          </View>
+        )}
+      </View>
 
-      {customer.added_by && (
-        <Text style={styles.addedBy}>Added by user ID: {customer.added_by}</Text>
+      {/* {supplier.added_by && (
+        <Text style={styles.addedBy}>Added by user ID: {supplier.added_by}</Text>
       )} */}
     </View>
   );
 
-  if (loading && customers.length === 0) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
-        <Text style={styles.loadingText}>Loading customers...</Text>
+        <Text style={styles.loadingText}>Loading suppliers...</Text>
       </View>
     );
   }
@@ -257,14 +281,14 @@ const CustomerManagementScreen = ({ navigation }) => {
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Customer Management</Text>
+              <Text style={styles.headerTitle}>Supplier Management</Text>
               <Text style={styles.headerSubtitle}>
-                {stats.totalCustomers} customers • {stats.territories} territories
+                {stats.activeSuppliers}/{stats.totalSuppliers} active • ${stats.totalCreditLimit.toLocaleString()} credit
               </Text>
             </View>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => navigation.navigate('AddCustomer')}
+              onPress={() => navigation.navigate('AddSupplier')}
             >
               <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>
@@ -275,19 +299,19 @@ const CustomerManagementScreen = ({ navigation }) => {
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Ionicons name="people" size={24} color="#6B7D3D" />
-          <Text style={styles.statNumber}>{stats.totalCustomers}</Text>
-          <Text style={styles.statLabel}>Total Customers</Text>
+          <Ionicons name="business" size={24} color="#6B7D3D" />
+          <Text style={styles.statNumber}>{stats.totalSuppliers}</Text>
+          <Text style={styles.statLabel}>Total Suppliers</Text>
         </View>
         <View style={styles.statCard}>
-          <Ionicons name="location" size={24} color="#E74C3C" />
-          <Text style={styles.statNumber}>{stats.territories}</Text>
-          <Text style={styles.statLabel}>Territories</Text>
+          <Ionicons name="checkmark-circle" size={24} color="#27AE60" />
+          <Text style={styles.statNumber}>{stats.activeSuppliers}</Text>
+          <Text style={styles.statLabel}>Active</Text>
         </View>
         <View style={styles.statCard}>
-          <Ionicons name="business" size={24} color="#3498DB" />
-          <Text style={styles.statNumber}>{stats.types}</Text>
-          <Text style={styles.statLabel}>Customer Types</Text>
+          <Ionicons name="card" size={24} color="#E74C3C" />
+          <Text style={styles.statNumber}>${stats.totalCreditLimit.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>Total Credit</Text>
         </View>
       </View>
 
@@ -297,7 +321,7 @@ const CustomerManagementScreen = ({ navigation }) => {
           <Ionicons name="search" size={20} color="#666" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search customers..."
+            placeholder="Search suppliers..."
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -309,49 +333,31 @@ const CustomerManagementScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Customers List */}
+      {/* Suppliers List */}
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-          if (isCloseToBottom && hasMoreData && !loading) {
-            loadMoreCustomers();
-          }
-        }}
-        scrollEventThrottle={400}
       >
-        {filteredCustomers.length > 0 ? (
-          <>
-            {filteredCustomers.map(renderCustomerCard)}
-            
-            {/* Load More Indicator */}
-            {hasMoreData && (
-              <View style={styles.loadMoreContainer}>
-                <ActivityIndicator size="small" color="#6B7D3D" />
-                <Text style={styles.loadMoreText}>Loading more customers...</Text>
-              </View>
-            )}
-          </>
+        {filteredSuppliers.length > 0 ? (
+          filteredSuppliers.map(renderSupplierCard)
         ) : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
+            <Ionicons name="business-outline" size={64} color="#ccc" />
             <Text style={styles.emptyText}>
-              {searchQuery ? 'No customers found' : 'No customers available'}
+              {searchQuery ? 'No suppliers found' : 'No suppliers available'}
             </Text>
             <Text style={styles.emptySubtext}>
-              {searchQuery ? 'Try adjusting your search' : 'Add your first customer to get started'}
+              {searchQuery ? 'Try adjusting your search' : 'Add your first supplier to get started'}
             </Text>
             {!searchQuery && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddCustomer')}
+                onPress={() => navigation.navigate('AddSupplier')}
               >
-                <Text style={styles.emptyButtonText}>Add Customer</Text>
+                <Text style={styles.emptyButtonText}>Add Supplier</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -440,7 +446,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginTop: 5,
@@ -476,7 +482,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  customerCard: {
+  supplierCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
@@ -487,27 +493,43 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  customerHeader: {
+  supplierHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 15,
   },
-  customerInfo: {
+  supplierInfo: {
     flex: 1,
   },
-  customerName: {
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  supplierName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
+    flex: 1,
   },
-  customerNameAr: {
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 10,
+  },
+  statusText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  supplierNameAr: {
     fontSize: 16,
     color: '#666',
     textAlign: 'right',
   },
-  customerActions: {
+  supplierActions: {
     flexDirection: 'row',
     gap: 8,
   },
@@ -524,7 +546,24 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
-  customerDetails: {
+  contactSection: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  contactText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#555',
+    flex: 1,
+  },
+  supplierDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 15,
@@ -547,44 +586,40 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 6,
   },
-  customerAddress: {
+  supplierAddress: {
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
-    marginBottom: 10,
+    marginBottom: 15,
     fontStyle: 'italic',
   },
-  locationButton: {
+  businessInfo: {
+    backgroundColor: '#f8fafb',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+  },
+  businessRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  locationText: {
-    marginLeft: 5,
-    fontSize: 12,
-    color: '#3498DB',
-    fontWeight: '500',
+  businessLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  businessValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    textAlign: 'right',
   },
   addedBy: {
     fontSize: 12,
     color: '#999',
     fontStyle: 'italic',
-  },
-  loadMoreContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  loadMoreText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#666',
   },
   emptyContainer: {
     flex: 1,
@@ -618,4 +653,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomerManagementScreen;
+export default SupplierManagementScreen;

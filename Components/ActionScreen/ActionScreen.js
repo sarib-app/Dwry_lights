@@ -54,10 +54,13 @@ const ActionsScreen = ({navigation}) => {
 if (actionTitle === 'Inventory') {
   navigation.navigate('InventoryManagement');
 } else if (actionTitle === 'Items') {
-  navigation.navigate('ItemManagement');
+  navigation.navigate('ItemManagementScreen');
 }
  else if (actionTitle === 'Customers') {
   navigation.navigate('CustomerManagement');
+}
+ else if (actionTitle === 'Suppliers') {
+  navigation.navigate('SupplierManagement');
 }
 else {
     Alert.alert(

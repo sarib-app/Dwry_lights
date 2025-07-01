@@ -21,6 +21,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
 const AddInventoryScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
+    item_id:'',
     item_name: '',
     description: '',
     quantity: '',
@@ -116,6 +117,7 @@ const AddInventoryScreen = ({ navigation }) => {
   const handleItemSelect = (item) => {
     setFormData(prev => ({
       ...prev,
+      item_id:item.id,
       item_name: item.name,
       description: item.description || '',
       cost: item.amount?.toString() || '',
@@ -154,6 +156,7 @@ const AddInventoryScreen = ({ navigation }) => {
       }
 
       const payload = {
+        item_id:formData.item_id,
         item_name: formData.item_name,
         description: formData.description,
         quantity: parseInt(formData.quantity),

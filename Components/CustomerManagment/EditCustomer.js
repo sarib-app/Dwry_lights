@@ -67,7 +67,7 @@ const EditCustomerScreen = ({ navigation, route }) => {
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      const token = await AsyncStorage.getItem('userToken')
       if (token) {
         return `Bearer ${token}`;
       }

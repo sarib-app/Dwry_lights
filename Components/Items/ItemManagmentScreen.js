@@ -15,9 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import getAuthToken from '../Globals/Store/LocalData';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
-const AUTH_TOKEN = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
+// const token = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
 
 const ItemManagementScreen = ({ navigation }) => {
   const [items, setItems] = useState([]);
@@ -28,12 +30,17 @@ const ItemManagementScreen = ({ navigation }) => {
   const translate = (key) => languageService.translate(key);
 
   // Fetch all items
+   
+
+
   const fetchItems = async () => {
+    const token = await getAuthToken()
+    if(token)
     try {
       const response = await fetch(`${API_BASE_URL}/fetch_all_items`, {
         method: 'GET',
         headers: {
-          'Authorization': AUTH_TOKEN,
+          'Authorization': token,
         },
       });
       
@@ -69,7 +76,7 @@ const ItemManagementScreen = ({ navigation }) => {
               const response = await fetch(`${API_BASE_URL}/destroy_item_by_id/${itemId}`, {
                 method: 'POST',
                 headers: {
-                  'Authorization': AUTH_TOKEN,
+                  'Authorization': token,
                 },
               });
               
