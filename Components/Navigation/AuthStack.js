@@ -17,6 +17,10 @@ import EditCustomerScreen from '../CustomerManagment/EditCustomer';
 import SupplierManagementScreen from '../SupplierManagment/SupplierManagmentScreen';
 import AddSupplierScreen from '../SupplierManagment/AddSupplierScreen';
 import EditSupplierScreen from '../SupplierManagment/EditSupplierScreen';
+import SalesInvoiceListScreen from '../SalesInvoiceManagment/SalesInvoiceScreen';
+import AddSalesInvoiceScreen from '../SalesInvoiceManagment/CreateSalesInvoiceScreen';
+import EditSalesInvoiceScreen from '../SalesInvoiceManagment/EditSalesInvoice';
+import InvoiceDetailsScreen from '../SalesInvoiceManagment/InvoiceDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -45,7 +49,10 @@ const AuthStack = () => {
 <Stack.Screen name="AddSupplier" component={AddSupplierScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditSupplier" component={EditSupplierScreen} options={{ headerShown: false }} />
 
-   
+<Stack.Screen name="SalesInvoiceList" component={SalesInvoiceListScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddSalesInvoice" component={AddSalesInvoiceScreen} options={{ headerShown: false }} />
+<Stack.Screen name="EditSalesInvoice" component={EditSalesInvoiceScreen} options={{ headerShown: false }} />
+<Stack.Screen name="InvoiceDetails" component={InvoiceDetailsScreen} options={{ headerShown: false }} />
 
       </Stack.Navigator>
     </NavigationContainer>

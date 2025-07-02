@@ -17,28 +17,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
-import EditCustomerScreen from '../CustomerManagment/EditCustomer';
-import AddCustomerScreen from '../CustomerManagment/AddCustomer';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
- const AddSalesInvoiceScreen = ({ navigation }) => {
+const EditSalesInvoiceScreen = ({ navigation, route }) => {
+  const { invoice } = route.params;
+  
   const [formData, setFormData] = useState({
-    customer_id: '',
-    invoice_number: '',
-    invoice_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    items: [],
-    subtotal: 0,
-    tax_percentage: 15,
-    tax_amount: 0,
-    discount_percentage: 0,
-    discount_amount: 0,
-    total_amount: 0,
-    payment_status: 'pending',
-    payment_method: 'Cash',
-    notes: '',
-    created_by: 1
+    customer_id: invoice.customer?.id || '',
+    invoice_number: invoice.invoice_number || '',
+    invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],
+    due_date: invoice.due_date || '',
+    items: invoice.items || [],
+    subtotal: parseFloat(invoice.subtotal || 0),
+    tax_percentage: parseFloat(invoice.tax_percentage || 15),
+    tax_amount: parseFloat(invoice.tax_amount || 0),
+    discount_percentage: parseFloat(invoice.discount_percentage || 0),
+    discount_amount: parseFloat(invoice.discount_amount || 0),
+    total_amount: parseFloat(invoice.total_amount || 0),
+    payment_status: invoice.payment_status || 'pending',
+    payment_method: invoice.payment_method || 'Cash',
+    notes: invoice.notes || '',
+    created_by: invoice.created_by || 1
   });
 
   const [customers, setCustomers] = useState([]);
@@ -66,10 +66,6 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
     const language = await languageService.loadSavedLanguage();
     setCurrentLanguage(language);
     setIsRTL(language === 'ar');
-    
-    // Generate invoice number
-    const invoiceNumber = `INV-${Date.now()}`;
-    setFormData(prev => ({ ...prev, invoice_number: invoiceNumber }));
   };
 
   const fetchInitialData = async () => {
@@ -238,24 +234,14 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       }
 
       const payload = {
-        customer_id: parseInt(formData.customer_id),
         invoice_number: formData.invoice_number,
-        invoice_date: formData.invoice_date,
-        due_date: formData.due_date,
-        items: formData.items,
-        subtotal: parseFloat(formData.subtotal),
-        tax_percentage: parseFloat(formData.tax_percentage),
-        tax_amount: parseFloat(formData.tax_amount),
-        discount_percentage: parseFloat(formData.discount_percentage),
-        discount_amount: parseFloat(formData.discount_amount),
-        total_amount: parseFloat(formData.total_amount),
         payment_status: formData.payment_status,
-        payment_method: formData.payment_method,
-        notes: formData.notes,
+        total_amount: parseFloat(formData.total_amount),
+        items: formData.items,
         created_by: formData.created_by
       };
 
-      const response = await fetch(`${API_BASE_URL}/add_sale_invoice`, {
+      const response = await fetch(`${API_BASE_URL}/update_sale_invoice_by_id/${invoice.id}`, {
         method: 'POST',
         headers: {
           'Authorization': token,
@@ -265,27 +251,27 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       });
 
       const result = await response.json();
-      console.log('Add invoice response:', result);
+      console.log('Update invoice response:', result);
 
       if (result.status == 200) {
         Alert.alert(
           translate('success'),
-          translate('invoiceCreatedSuccessfully'),
+          translate('invoiceUpdatedSuccessfully'),
           [{ text: translate('ok'), onPress: () => navigation.goBack() }]
         );
       } else {
-        Alert.alert(translate('error'), result.message || translate('failedToCreateInvoice'));
+        Alert.alert(translate('error'), result.message || translate('failedToUpdateInvoice'));
       }
     } catch (error) {
-      console.error('Add invoice error:', error);
-      Alert.alert(translate('error'), translate('networkErrorCreatingInvoice'));
+      console.error('Update invoice error:', error);
+      Alert.alert(translate('error'), translate('networkErrorUpdatingInvoice'));
     } finally {
       setLoading(false);
     }
   };
 
   // Get selected customer
-  const selectedCustomer = customers.find(c => c.id == formData.customer_id);
+  const selectedCustomer = customers.find(c => c.id == formData.customer_id) || invoice.customer;
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -317,7 +303,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
               <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, isRTL && styles.arabicText]}>
-              {translate('addSalesInvoice')}
+              {translate('editSalesInvoice')}
             </Text>
             <View style={styles.placeholder} />
           </View>
@@ -658,9 +644,9 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <Ionicons name="checkmark" size={20} color="#fff" />
+              <Ionicons name="save" size={20} color="#fff" />
               <Text style={[styles.submitButtonText, isRTL && styles.arabicText]}>
-                {translate('createInvoice')}
+                {translate('updateInvoice')}
               </Text>
             </>
           )}
@@ -784,6 +770,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
   );
 };
 
+// Use the same styles as AddSalesInvoiceScreen
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -925,9 +912,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     flex: 1,
-  },
-  placeholder: {
-    color: '#999',
   },
   addItemButton: {
     flexDirection: 'row',
@@ -1212,7 +1196,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: 'Arabic',
   },
-})
+});
 
-
-export default AddSalesInvoiceScreen
+export default EditSalesInvoiceScreen;

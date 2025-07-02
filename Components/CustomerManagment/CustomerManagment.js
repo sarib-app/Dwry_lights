@@ -61,7 +61,7 @@ const CustomerManagementScreen = ({ navigation }) => {
       console.log('Customers API Response:', result);
       
       if (result.status == 200) {
-        const newCustomers = result.data?.data || [];
+        const newCustomers = result?.data || [];
         if (append) {
           setCustomers(prev => [...prev, ...newCustomers]);
         } else {
@@ -177,9 +177,9 @@ const CustomerManagementScreen = ({ navigation }) => {
   // Render customer card
   const renderCustomerCard = (customer) => (
     <View key={customer.id} style={styles.customerCard}>
-        <Text>
+        {/* <Text>
             {customer.name}
-        </Text>
+        </Text> */}
       {/* <View style={styles.customerHeader}>
         <View style={styles.customerInfo}>
           <Text style={styles.customerName}>{customer.name}</Text>
