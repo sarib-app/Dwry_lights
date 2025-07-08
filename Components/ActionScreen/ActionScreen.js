@@ -65,6 +65,10 @@ if (actionTitle === 'Inventory') {
 else if (actionTitle === 'Sales Invoice') {
   navigation.navigate('SalesInvoiceList');
 }
+else if(actionTitle === 'Expenses'){
+  navigation.navigate('ExpenseList');
+
+}
 
 else {
     Alert.alert(
