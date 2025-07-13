@@ -69,6 +69,10 @@ else if(actionTitle === 'Expenses'){
   navigation.navigate('ExpenseList');
 
 }
+else if(actionTitle === 'Purchase Orders'){
+  navigation.navigate('PurchaseOrderListScreen');
+
+}
 
 else {
     Alert.alert(

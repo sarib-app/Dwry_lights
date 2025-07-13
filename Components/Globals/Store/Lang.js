@@ -391,6 +391,80 @@ selectStaff: 'Select Staff',
 selectVendor: 'Select Vendor',
 noStaffAvailable: 'No staff members available',
 noSuppliersAvailable: 'No suppliers available',
+
+
+// Purchase Order Management
+purchaseOrders: 'Purchase Orders',
+ordersTotal: 'orders total',
+addPurchaseOrder: 'Add Purchase Order',
+editPurchaseOrder: 'Edit Purchase Order',
+deletePurchaseOrder: 'Delete Purchase Order',
+deletePurchaseOrderConfirmation: 'Are you sure you want to delete this purchase order?',
+purchaseOrderDeletedSuccessfully: 'Purchase order deleted successfully',
+failedToDeletePurchaseOrder: 'Failed to delete purchase order',
+networkErrorDeletingPurchaseOrder: 'Network error while deleting purchase order',
+loadingPurchaseOrders: 'Loading purchase orders...',
+searchPurchaseOrders: 'Search purchase orders...',
+filterPurchaseOrders: 'Filter Purchase Orders',
+noPurchaseOrdersFound: 'No purchase orders found',
+noPurchaseOrdersAvailable: 'No purchase orders available',
+addFirstPurchaseOrder: 'Add your first purchase order to get started',
+failedToFetchPurchaseOrders: 'Failed to fetch purchase orders',
+networkErrorFetchingPurchaseOrders: 'Network error while fetching purchase orders',
+
+// Purchase Order Details
+poDate: 'PO Date',
+expectedDelivery: 'Expected Delivery',
+supplierName: 'Supplier Name',
+totalOrders: 'Total Orders',
+approvedOrders: 'Approved Orders',
+deliveredOrders: 'Delivered Orders',
+cancelledOrders: 'Cancelled Orders',
+allPurchaseOrders: 'All Purchase Orders',
+
+// PO Status (some already exist, adding missing ones)
+delivered: 'Delivered',
+cancelled: 'Cancelled',
+shipped: 'Shipped',
+processing: 'Processing',
+
+// Additional missing keys I used
+loadingData: 'Loading data...',
+
+
+
+
+selectExpectedDeliveryDate: 'Select expected delivery date',
+purchaseOrderInformation: 'Purchase Order Information',
+supplierInformation: 'Supplier Information',
+orderItems: 'Order Items',
+addPOItem: 'Add Item',
+orderQuantity: 'Order Quantity',
+unitCost: 'Unit Cost',
+selectSupplierPlaceholder: 'Select a supplier',
+addItemsToPurchaseOrder: 'Add items to purchase order',
+financialDetails: 'Financial Details',
+taxAmount: 'Tax Amount',
+shippingCost: 'Shipping Cost',
+createPurchaseOrder: 'Create Purchase Order',
+contactPerson: 'Contact Person',
+supplierType: 'Supplier Type',
+
+
+purchaseOrder: 'Purchase Order',
+purchaseOrderSystem: 'Purchase Order System',
+purchaseOrderDetails: 'Purchase Order Details',
+purchaseOrderActions: 'Purchase Order Actions',
+failedToFetchOrderDetails: 'Failed to fetch order details',
+itemsSubtotal: 'Items Subtotal',
+itemName: 'Item Name',
+editPurchaseOrder: 'Edit Purchase Order',
+status: 'Status',
+
+
+supplierNameRequired: 'Supplier name is required',
+enterSupplierName: 'Enter supplier name',
+updatePurchaseOrder: 'Update Purchase Order',
   },
   ar: {
     // App General
@@ -776,6 +850,79 @@ selectVendor: 'اختر مورد',
 noStaffAvailable: 'لا يوجد موظفون متاحون',
 noSuppliersAvailable: 'لا يوجد موردون متاحون',
 
+
+
+// Purchase Order Management
+purchaseOrders: 'أوامر الشراء',
+ordersTotal: 'إجمالي الأوامر',
+addPurchaseOrder: 'إضافة أمر شراء',
+editPurchaseOrder: 'تعديل أمر شراء',
+deletePurchaseOrder: 'حذف أمر شراء',
+deletePurchaseOrderConfirmation: 'هل أنت متأكد من حذف أمر الشراء هذا؟',
+purchaseOrderDeletedSuccessfully: 'تم حذف أمر الشراء بنجاح',
+failedToDeletePurchaseOrder: 'فشل في حذف أمر الشراء',
+networkErrorDeletingPurchaseOrder: 'خطأ شبكة أثناء حذف أمر الشراء',
+loadingPurchaseOrders: 'جاري تحميل أوامر الشراء...',
+searchPurchaseOrders: 'البحث في أوامر الشراء...',
+filterPurchaseOrders: 'تصفية أوامر الشراء',
+noPurchaseOrdersFound: 'لم يتم العثور على أوامر شراء',
+noPurchaseOrdersAvailable: 'لا توجد أوامر شراء متاحة',
+addFirstPurchaseOrder: 'أضف أمر الشراء الأول للبدء',
+failedToFetchPurchaseOrders: 'فشل في جلب أوامر الشراء',
+networkErrorFetchingPurchaseOrders: 'خطأ شبكة أثناء جلب أوامر الشراء',
+
+// Purchase Order Details
+poDate: 'تاريخ أمر الشراء',
+expectedDelivery: 'التسليم المتوقع',
+supplierName: 'اسم المورد',
+totalOrders: 'إجمالي الأوامر',
+approvedOrders: 'الأوامر المعتمدة',
+deliveredOrders: 'الأوامر المُسلّمة',
+cancelledOrders: 'الأوامر الملغية',
+allPurchaseOrders: 'جميع أوامر الشراء',
+
+// PO Status (some already exist, adding missing ones)
+delivered: 'مُسلّم',
+cancelled: 'ملغي',
+shipped: 'مُرسل',
+processing: 'قيد المعالجة',
+
+// Additional missing keys
+loadingData: 'جاري تحميل البيانات...',
+
+
+
+selectExpectedDeliveryDate: 'اختر تاريخ التسليم المتوقع',
+purchaseOrderInformation: 'معلومات أمر الشراء',
+supplierInformation: 'معلومات المورد',
+orderItems: 'عناصر الأمر',
+addPOItem: 'إضافة عنصر',
+orderQuantity: 'كمية الطلب',
+unitCost: 'تكلفة الوحدة',
+selectSupplierPlaceholder: 'اختر مورد',
+addItemsToPurchaseOrder: 'أضف عناصر لأمر الشراء',
+financialDetails: 'التفاصيل المالية',
+taxAmount: 'مبلغ الضريبة',
+shippingCost: 'تكلفة الشحن',
+createPurchaseOrder: 'إنشاء أمر شراء',
+contactPerson: 'الشخص المسؤول',
+supplierType: 'نوع المورد',
+
+
+purchaseOrder: 'أمر شراء',
+purchaseOrderSystem: 'نظام أوامر الشراء',
+purchaseOrderDetails: 'تفاصيل أمر الشراء',
+purchaseOrderActions: 'إجراءات أمر الشراء',
+failedToFetchOrderDetails: 'فشل في جلب تفاصيل الأمر',
+itemsSubtotal: 'مجموع العناصر',
+itemName: 'اسم العنصر',
+editPurchaseOrder: 'تعديل أمر الشراء',
+status: 'الحالة',
+
+
+supplierNameRequired: 'اسم المورد مطلوب',
+enterSupplierName: 'أدخل اسم المورد',
+updatePurchaseOrder: 'تحديث أمر الشراء',
   }
 };
 
