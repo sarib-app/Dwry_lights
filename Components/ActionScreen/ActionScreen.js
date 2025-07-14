@@ -22,7 +22,7 @@ const ActionsScreen = ({navigation}) => {
     // Core Business
     { id: 1, title: 'Items', icon: 'cube', color: '#6B7D3D', category: 'core' },
     { id: 2, title: 'Inventory', icon: 'library', color: '#8B5A2B', category: 'core' },
-    { id: 3, title: 'Categories', icon: 'grid', color: '#4A90E2', category: 'core' },
+    { id: 3, title: 'Banks', icon: 'grid', color: '#4A90E2', category: 'core' },
     
     // People Management
     { id: 4, title: 'Customers', icon: 'people', color: '#E74C3C', category: 'people' },
@@ -67,13 +67,16 @@ else if (actionTitle === 'Sales Invoice') {
 }
 else if(actionTitle === 'Expenses'){
   navigation.navigate('ExpenseList');
-
 }
 else if(actionTitle === 'Purchase Orders'){
   navigation.navigate('PurchaseOrderListScreen');
-
 }
-
+else if(actionTitle === 'Payments'){
+  navigation.navigate('PaymentEntryListScreen');
+}
+else if(actionTitle === 'Banks'){
+  navigation.navigate('BankListScreen');
+}
 else {
     Alert.alert(
       actionTitle,

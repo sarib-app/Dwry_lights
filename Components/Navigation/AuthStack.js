@@ -29,6 +29,11 @@ import PurchaseOrderListScreen from '../PurchaseOrder/PurchaseOrderList';
 import AddPurchaseOrderScreen from '../PurchaseOrder/AddPurchaseOrderScreen';
 import PurchaseOrderDetailsScreen from '../PurchaseOrder/PurchaseOrderDetailsScreen';
 import EditPurchaseOrderScreen from '../PurchaseOrder/EditPurchaseOrder';
+import PaymentEntryListScreen from '../PaymentEntry/PaymentEntry';
+import AddPaymentEntryScreen from '../PaymentEntry/AddPaymentEntry';
+import PaymentEntryDetailsScreen from '../PaymentEntry/PaymentEntryDetail';
+import EditPaymentEntryScreen from '../PaymentEntry/EditPaymentEntry';
+import BankListScreen from '../BankListScreen/BankListScreen';
 
 const Stack = createStackNavigator();
 
@@ -72,10 +77,22 @@ const AuthStack = () => {
 
 
 <Stack.Screen name="PurchaseOrderListScreen" component={PurchaseOrderListScreen} options={{ headerShown: false }} />
-
 <Stack.Screen name="AddPurchaseOrder" component={AddPurchaseOrderScreen} options={{ headerShown: false }} />
 <Stack.Screen name="PurchaseOrderDetails" component={PurchaseOrderDetailsScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditPurchaseOrder" component={EditPurchaseOrderScreen} options={{ headerShown: false }} />
+
+
+<Stack.Screen name="PaymentEntryListScreen" component={PaymentEntryListScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddPaymentEntry" component={AddPaymentEntryScreen} options={{ headerShown: false }} />
+<Stack.Screen name="PaymentEntryDetails" component={PaymentEntryDetailsScreen} options={{ headerShown: false }} />
+<Stack.Screen name="EditPaymentEntry" component={EditPaymentEntryScreen} options={{ headerShown: false }} />
+
+
+<Stack.Screen name="BankListScreen" component={BankListScreen} options={{ headerShown: false }} />
+
+
+
+
 
 
 
