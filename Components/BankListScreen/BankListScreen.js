@@ -17,7 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
-import { commonStyles, getStatusColor } from '../shared/CommonStyles';
+// import { commonStyles, getStatusColor } from '../shared/CommonStyles';
+import commonStyles from '../Globals/CommonStyles';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 

@@ -34,6 +34,10 @@ import AddPaymentEntryScreen from '../PaymentEntry/AddPaymentEntry';
 import PaymentEntryDetailsScreen from '../PaymentEntry/PaymentEntryDetail';
 import EditPaymentEntryScreen from '../PaymentEntry/EditPaymentEntry';
 import BankListScreen from '../BankListScreen/BankListScreen';
+import SalesReportScreen from '../Reports/SalesReport';
+import SalesReportFiltersScreen from '../Reports/SalesFilterModal';
+import CustomerSelectorScreen from '../ModalList/CustomerList';
+import StaffSelectorScreen from '../ModalList/StaffListScreen';
 
 const Stack = createStackNavigator();
 
@@ -89,6 +93,15 @@ const AuthStack = () => {
 
 
 <Stack.Screen name="BankListScreen" component={BankListScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="salesReport" component={SalesReportScreen} options={{ headerShown: false }} />
+<Stack.Screen name="SalesReportFilters" component={SalesReportFiltersScreen} options={{ headerShown: false }} />
+<Stack.Screen name="CustomerSelectorScreen" component={CustomerSelectorScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="StaffSelectorScreen" component={StaffSelectorScreen} options={{ headerShown: false }} />
+
+
+
 
 
 

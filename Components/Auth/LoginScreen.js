@@ -33,7 +33,7 @@ const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    email: 'staff3@example.com',
+    email: 'admin@gmail.com',
     password: 'password123'
   });
   
@@ -199,7 +199,7 @@ const LoginScreen = ({ navigation }) => {
         );
         // Replace the navigation line in handleLogin success:
 // navigation.navigate('Dashboard');
-navigation.navigate('MainBottomTabs');
+        navigation.navigate('MainBottomTabs');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         

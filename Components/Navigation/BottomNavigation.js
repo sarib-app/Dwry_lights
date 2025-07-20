@@ -7,6 +7,7 @@ import SettingsScreen from '../Settings/SettingScreen';
 import NotificationsScreen from '../Notifications/NotificationScreen';
 import ActionsScreen from '../ActionScreen/ActionScreen';
 import InsightsScreen from '../Insights/InsightScreen';
+import ReportsDashboardScreen from '../ActionScreen/ReportActions';
 
 // import InsightsScreen from './InsightsScreen';
 // import ActionsScreen from './ActionsScreen';
@@ -46,7 +47,7 @@ const MainBottomTabs = () => {
     >
       <Tab.Screen 
         name="Insights" 
-        component={InsightsScreen}
+        component={ReportsDashboardScreen}
         options={{ tabBarLabel: translate('insights') }}
       />
       <Tab.Screen 
