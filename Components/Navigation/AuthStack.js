@@ -38,6 +38,12 @@ import SalesReportScreen from '../Reports/SalesReport';
 import SalesReportFiltersScreen from '../Reports/SalesFilterModal';
 import CustomerSelectorScreen from '../ModalList/CustomerList';
 import StaffSelectorScreen from '../ModalList/StaffListScreen';
+import CustomerReportScreen from '../Reports/CustomerReport';
+// import InventoryReportFiltersScreen from '../Reports/InventoryReport';
+import InventoryReportScreen from '../Reports/InventoryReport';
+import InventoryReportFiltersScreen from '../Reports/InventoryFilter';
+import FinancialSummaryScreen from '../Reports/FinancialReport';
+import FinancialSummaryFiltersScreen from '../Reports/FinancialFilter';
 
 const Stack = createStackNavigator();
 
@@ -99,11 +105,13 @@ const AuthStack = () => {
 <Stack.Screen name="CustomerSelectorScreen" component={CustomerSelectorScreen} options={{ headerShown: false }} />
 
 <Stack.Screen name="StaffSelectorScreen" component={StaffSelectorScreen} options={{ headerShown: false }} />
+<Stack.Screen name="customerReport" component={CustomerReportScreen} options={{ headerShown: false }} />
+<Stack.Screen name="inventoryStats" component={InventoryReportScreen} options={{ headerShown: false }} />
+<Stack.Screen name="InventoryReportFilters" component={InventoryReportFiltersScreen} options={{ headerShown: false }} />
 
 
-
-
-
+<Stack.Screen name="financialSummary" component={FinancialSummaryScreen} options={{ headerShown: false }} />
+<Stack.Screen name="FinancialSummaryFilters" component={FinancialSummaryFiltersScreen} options={{ headerShown: false }} />
 
 
 

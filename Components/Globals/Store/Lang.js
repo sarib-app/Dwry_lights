@@ -670,6 +670,126 @@ customerVisits: 'Customer Visits',
   cost: 'Cost',
   profit: 'Profit',
   invoices: 'invoices',
+
+    // Customer Report Translations
+  customerReport: 'Customer Report',
+  customerAnalytics: 'Customer Analytics',
+  loadingCustomerReport: 'Loading customer report...',
+  failedToFetchCustomerReport: 'Failed to fetch customer report',
+  networkErrorFetchingCustomerReport: 'Network error while fetching customer report',
+  pleaseSelectCustomer: 'Please select a customer first',
+  selectCustomerToViewReport: 'Select a Customer to View Report',
+  chooseCustomerFromList: 'Choose a customer from the list to view their detailed analytics',
+  
+  // Customer Report Stats
+  totalOrders: 'Total Orders',
+  totalVisits: 'Total Visits',
+  customerPerformance: 'Customer Performance',
+  targetAmount: 'Target Amount',
+  remaining: 'Remaining',
+  financialBreakdown: 'Financial Breakdown',
+  totalRevenue: 'Total Revenue',
+  totalCost: 'Total Cost',
+  profitMargin: 'Profit Margin',
+  totalLoss: 'Total Loss',
+  orderStatus: 'Order Status',
+  completed: 'Completed',
+  revenue: 'Revenue',
+  
+  // Customer Report Filters
+  customerReportFilters: 'Customer Report Filters',
+  customizeReportPeriod: 'Customize Report Period',
+  selectedCustomer: 'Selected Customer',
+  customDateRange: 'Custom Date Range',
+  resetToCurrentMonth: 'Reset to Current Month',
+  change: 'Change',
+  
+  // Additional Common Translations
+  adjustDateRangeOrTryAgain: 'Adjust the date range or try again later',
+  noDataAvailable: 'No Data Available',
+    // Inventory Report Translations
+  inventoryReport: 'Inventory Report',
+  loadingInventoryReport: 'Loading inventory report...',
+  failedToFetchInventoryReport: 'Failed to fetch inventory report',
+  networkErrorFetchingInventoryReport: 'Network error while fetching inventory report',
+  itemsTracked: 'items tracked',
+  noInventoryData: 'No Inventory Data',
+  adjustFiltersOrAddItems: 'Adjust filters or add items to your inventory',
+  
+  // Inventory Stats
+  totalItems: 'Total Items',
+  totalValue: 'Total Value',
+  lowStockItems: 'Low Stock Items',
+  reorderNeeded: 'Reorder Needed',
+  topItemsByValue: 'Top Items by Value',
+  stockStatusOverview: 'Stock Status Overview',
+  normalStock: 'Normal Stock',
+  lowStock: 'Low Stock',
+  inventoryItems: 'Inventory Items',
+  
+  // Item Details
+  itemId: 'Item ID',
+  currentStock: 'Current Stock',
+  inventoryValue: 'Inventory Value',
+  availableQty: 'Available Qty',
+  soldQty: 'Sold Qty',
+  reorderRecommended: 'Reorder Recommended',
+  
+  // Inventory Filters
+  inventoryFilters: 'Inventory Filters',
+  customizeInventoryReport: 'Customize Inventory Report',
+  lowStockThreshold: 'Low Stock Threshold',
+  thresholdDescription: 'Items with stock below this level will be marked as low stock',
+  units: 'units',
+  quickThresholds: 'Quick Thresholds',
+  itemFilter: 'Item Filter',
+  allItems: 'All Items',
+  specificItemSelected: 'Specific Item Selected',
+  clearItemFilter: 'Clear Item Filter',
+  itemFilterNote: 'Leave empty to include all items, or select a specific item to focus on',
+  filterSummary: 'Filter Summary',
+  itemScope: 'Item Scope',
+  specificItem: 'Specific Item',
+  resetToDefault: 'Reset to Default',
+  validThresholdRequired: 'Please enter a valid threshold value',
+  items: 'items',
+
+
+   // Financial Summary Report Translations
+  financialSummary: 'Financial Summary',
+  loadingFinancialSummary: 'Loading financial summary...',
+  failedToFetchFinancialSummary: 'Failed to fetch financial summary',
+  networkErrorFetchingFinancialSummary: 'Network error while fetching financial summary',
+  comprehensiveFinancialOverview: 'Comprehensive Financial Overview',
+  noFinancialData: 'No Financial Data',
+  
+  // Financial Overview Cards
+  totalIncome: 'Total Income',
+  totalExpenses: 'Total Expenses',
+  netProfitLoss: 'Net Profit/Loss',
+  totalPurchases: 'Total Purchases',
+  
+  // Charts and Analysis
+  cashFlowAnalysis: 'Cash Flow Analysis',
+  profitLossBreakdown: 'Profit/Loss Breakdown',
+  productBasedProfit: 'Product Based Profit',
+  outstandingAmounts: 'Outstanding Amounts',
+  receivables: 'Receivables',
+  payables: 'Payables',
+  pendingTransactions: 'Pending Transactions',
+  pendingIncome: 'Pending Income',
+  pendingPurchases: 'Pending Purchases',
+  
+  // Chart Labels
+  income: 'Income',
+  expenses: 'Expenses',
+  purchases: 'Purchases',
+  spent: 'Spent',
+  
+  // Financial Filters
+  financialFilters: 'Financial Filters',
+  selectDateRange: 'Select Date Range',
+  customDateRange: 'Custom Date Range',
   },
   ar: {
     // App General
@@ -1334,7 +1454,126 @@ customerVisits: 'زيارات العملاء',
   cost: 'التكلفة',
   profit: 'الربح',
   invoices: 'فواتير',
+  // Customer Report Translations
+  customerReport: 'تقرير العميل',
+  customerAnalytics: 'تحليلات العميل',
+  loadingCustomerReport: 'جاري تحميل تقرير العميل...',
+  failedToFetchCustomerReport: 'فشل في جلب تقرير العميل',
+  networkErrorFetchingCustomerReport: 'خطأ شبكة أثناء جلب تقرير العميل',
+  pleaseSelectCustomer: 'يرجى اختيار عميل أولاً',
+  selectCustomerToViewReport: 'اختر عميل لعرض التقرير',
+  chooseCustomerFromList: 'اختر عميل من القائمة لعرض تحليلاته التفصيلية',
+  
+  // Customer Report Stats
+  totalOrders: 'إجمالي الطلبات',
+  totalVisits: 'إجمالي الزيارات',
+  customerPerformance: 'أداء العميل',
+  targetAmount: 'المبلغ المستهدف',
+  remaining: 'المتبقي',
+  financialBreakdown: 'التفصيل المالي',
+  totalRevenue: 'إجمالي الإيرادات',
+  totalCost: 'إجمالي التكلفة',
+  profitMargin: 'هامش الربح',
+  totalLoss: 'إجمالي الخسارة',
+  orderStatus: 'حالة الطلبات',
+  completed: 'مكتمل',
+  revenue: 'الإيرادات',
+  
+  // Customer Report Filters
+  customerReportFilters: 'مرشحات تقرير العميل',
+  customizeReportPeriod: 'تخصيص فترة التقرير',
+  selectedCustomer: 'العميل المحدد',
+  customDateRange: 'نطاق تاريخ مخصص',
+  resetToCurrentMonth: 'إعادة تعيين للشهر الحالي',
+  change: 'تغيير',
+  
+  // Additional Common Translations
+  adjustDateRangeOrTryAgain: 'اضبط نطاق التاريخ أو حاول مرة أخرى لاحقاً',
+  noDataAvailable: 'لا توجد بيانات متاحة',
 
+  // Inventory Report Translations
+  inventoryReport: 'تقرير المخزون',
+  loadingInventoryReport: 'جاري تحميل تقرير المخزون...',
+  failedToFetchInventoryReport: 'فشل في جلب تقرير المخزون',
+  networkErrorFetchingInventoryReport: 'خطأ شبكة أثناء جلب تقرير المخزون',
+  itemsTracked: 'عنصر متتبع',
+  noInventoryData: 'لا توجد بيانات مخزون',
+  adjustFiltersOrAddItems: 'اضبط المرشحات أو أضف عناصر إلى مخزونك',
+  
+  // Inventory Stats
+  totalItems: 'إجمالي العناصر',
+  totalValue: 'القيمة الإجمالية',
+  lowStockItems: 'عناصر مخزون منخفض',
+  reorderNeeded: 'يحتاج إعادة طلب',
+  topItemsByValue: 'أفضل العناصر حسب القيمة',
+  stockStatusOverview: 'نظرة عامة على حالة المخزون',
+  normalStock: 'مخزون طبيعي',
+  lowStock: 'مخزون منخفض',
+  inventoryItems: 'عناصر المخزون',
+  
+  // Item Details
+  itemId: 'رقم العنصر',
+  currentStock: 'المخزون الحالي',
+  inventoryValue: 'قيمة المخزون',
+  availableQty: 'الكمية المتاحة',
+  soldQty: 'الكمية المباعة',
+  reorderRecommended: 'يُنصح بإعادة الطلب',
+  
+  // Inventory Filters
+  inventoryFilters: 'مرشحات المخزون',
+  customizeInventoryReport: 'تخصيص تقرير المخزون',
+  lowStockThreshold: 'حد المخزون المنخفض',
+  thresholdDescription: 'العناصر التي يقل مخزونها عن هذا المستوى ستُعتبر مخزون منخفض',
+  units: 'وحدة',
+  quickThresholds: 'حدود سريعة',
+  itemFilter: 'مرشح العنصر',
+  allItems: 'جميع العناصر',
+  specificItemSelected: 'تم اختيار عنصر محدد',
+  clearItemFilter: 'إلغاء مرشح العنصر',
+  itemFilterNote: 'اتركه فارغاً لتشمل جميع العناصر، أو اختر عنصر محدد للتركيز عليه',
+  filterSummary: 'ملخص المرشحات',
+  itemScope: 'نطاق العنصر',
+  specificItem: 'عنصر محدد',
+  resetToDefault: 'إعادة تعيين للافتراضي',
+  validThresholdRequired: 'يرجى إدخال قيمة حد صالحة',
+  items: 'عناصر',
+
+  
+  // Financial Summary Report Translations
+  financialSummary: 'الملخص المالي',
+  loadingFinancialSummary: 'جاري تحميل الملخص المالي...',
+  failedToFetchFinancialSummary: 'فشل في جلب الملخص المالي',
+  networkErrorFetchingFinancialSummary: 'خطأ شبكة أثناء جلب الملخص المالي',
+  comprehensiveFinancialOverview: 'نظرة عامة مالية شاملة',
+  noFinancialData: 'لا توجد بيانات مالية',
+  
+  // Financial Overview Cards
+  totalIncome: 'إجمالي الدخل',
+  totalExpenses: 'إجمالي المصروفات',
+  netProfitLoss: 'صافي الربح/الخسارة',
+  totalPurchases: 'إجمالي المشتريات',
+  
+  // Charts and Analysis
+  cashFlowAnalysis: 'تحليل التدفق النقدي',
+  profitLossBreakdown: 'تفصيل الربح/الخسارة',
+  productBasedProfit: 'الربح المبني على المنتج',
+  outstandingAmounts: 'المبالغ المستحقة',
+  receivables: 'المستحقات',
+  payables: 'المدفوعات',
+  pendingTransactions: 'المعاملات المعلقة',
+  pendingIncome: 'الدخل المعلق',
+  pendingPurchases: 'المشتريات المعلقة',
+  
+  // Chart Labels
+  income: 'الدخل',
+  expenses: 'المصروفات',
+  purchases: 'المشتريات',
+  spent: 'المنفق',
+  
+  // Financial Filters
+  financialFilters: 'مرشحات مالية',
+  selectDateRange: 'اختر نطاق التاريخ',
+  customDateRange: 'نطاق تاريخ مخصص',
   }
 };
 
