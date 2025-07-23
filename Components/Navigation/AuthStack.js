@@ -44,6 +44,11 @@ import InventoryReportScreen from '../Reports/InventoryReport';
 import InventoryReportFiltersScreen from '../Reports/InventoryFilter';
 import FinancialSummaryScreen from '../Reports/FinancialReport';
 import FinancialSummaryFiltersScreen from '../Reports/FinancialFilter';
+import StaffCheckinScreen from '../Staff/StaffCheckin';
+import VisitHistoryFiltersScreen from '../Staff/StaffFilter';
+import StaffVisitHistoryScreen from '../Staff/StaffVisit';
+import SetSalesTargetScreen from '../SalesTarget/SetSalesTarget';
+import SalesPerformanceScreen from '../SalesTarget/SalesPerformance';
 
 const Stack = createStackNavigator();
 
@@ -63,7 +68,6 @@ const AuthStack = () => {
         <Stack.Screen name="InventoryManagement" component={InventoryManagementScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EditInventory" component={EditInventoryScreen} options={{ headerShown: false }} />
 
-
        <Stack.Screen name="CustomerManagement" component={CustomerManagementScreen} options={{ headerShown: false }} />
        <Stack.Screen name="AddCustomer" component={AddCustomerScreen} options={{ headerShown: false }}  /> 
        <Stack.Screen name="EditCustomer" component={EditCustomerScreen} options={{ headerShown: false }} />
@@ -77,26 +81,20 @@ const AuthStack = () => {
 <Stack.Screen name="EditSalesInvoice" component={EditSalesInvoiceScreen} options={{ headerShown: false }} />
 <Stack.Screen name="InvoiceDetails" component={InvoiceDetailsScreen} options={{ headerShown: false }} />
 
-
-
-
 <Stack.Screen name="ExpenseList" component={ExpenseListScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditExpense" component={EditExpenseScreen} options={{ headerShown: false }} />
 <Stack.Screen name="ExpenseDetails" component={ExpenseDetailsScreen} options={{ headerShown: false }} />
-
 
 <Stack.Screen name="PurchaseOrderListScreen" component={PurchaseOrderListScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddPurchaseOrder" component={AddPurchaseOrderScreen} options={{ headerShown: false }} />
 <Stack.Screen name="PurchaseOrderDetails" component={PurchaseOrderDetailsScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditPurchaseOrder" component={EditPurchaseOrderScreen} options={{ headerShown: false }} />
 
-
 <Stack.Screen name="PaymentEntryListScreen" component={PaymentEntryListScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddPaymentEntry" component={AddPaymentEntryScreen} options={{ headerShown: false }} />
 <Stack.Screen name="PaymentEntryDetails" component={PaymentEntryDetailsScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditPaymentEntry" component={EditPaymentEntryScreen} options={{ headerShown: false }} />
-
 
 <Stack.Screen name="BankListScreen" component={BankListScreen} options={{ headerShown: false }} />
 
@@ -109,16 +107,22 @@ const AuthStack = () => {
 <Stack.Screen name="inventoryStats" component={InventoryReportScreen} options={{ headerShown: false }} />
 <Stack.Screen name="InventoryReportFilters" component={InventoryReportFiltersScreen} options={{ headerShown: false }} />
 
-
 <Stack.Screen name="financialSummary" component={FinancialSummaryScreen} options={{ headerShown: false }} />
 <Stack.Screen name="FinancialSummaryFilters" component={FinancialSummaryFiltersScreen} options={{ headerShown: false }} />
 
+<Stack.Screen name="recordVisit" component={StaffCheckinScreen} options={{ headerShown: false }} />    
+{/* <Stack.Screen name="visitReport" cmponent={StaffVisitHistoryScreen} options={{ headerShown: false }} /> */}
+<Stack.Screen name="visitReport" component={StaffVisitHistoryScreen} options={{ headerShown: false }} />    
+
+<Stack.Screen name="VisitHistoryFilters" component={VisitHistoryFiltersScreen} options={{ headerShown: false }} />
+
+
+<Stack.Screen name="setSalesTarget" component={SetSalesTargetScreen} options={{ headerShown: false }} />
+<Stack.Screen name="salesTargetReport" component={SalesPerformanceScreen} options={{ headerShown: false }} />
 
 
 
-
-
-      </Stack.Navigator>
+    </Stack.Navigator>
     </NavigationContainer>
   );
 };

@@ -790,6 +790,183 @@ customerVisits: 'Customer Visits',
   financialFilters: 'Financial Filters',
   selectDateRange: 'Select Date Range',
   customDateRange: 'Custom Date Range',
+
+
+  error: 'Error',
+  authTokenNotFound: 'Authentication token not found',
+  dateRangeRequired: 'Please select both from and to dates',
+  invalidDateRange: 'From date cannot be later than to date',
+  failedToFetchVisitHistory: 'Failed to fetch visit history',
+  networkErrorFetchingVisitHistory: 'Network error while fetching visit history',
+  failedToGetLocation: 'Failed to get current location',
+  locationPermissionDenied: 'Location permission denied',
+  selectCustomerAndLocation: 'Please select customer and ensure location is available',
+  failedToVerifyLocation: 'Failed to verify location',
+  networkErrorVerifyingLocation: 'Network error while verifying location',
+  verifyLocationFirst: 'Please verify location first',
+  purposeRequired: 'Purpose is required',
+  failedToCheckin: 'Failed to submit check-in',
+  networkErrorCheckin: 'Network error while submitting check-in',
+  locationError: 'Location Error',
+  youAreNotInCustomerRadius: 'You are not within the customer location radius',
+
+  // Success messages
+  success: 'Success',
+  locationVerifiedSuccess: 'Location verified successfully',
+  checkinSuccessful: 'Check-in submitted successfully',
+
+  // General actions
+  ok: 'OK',
+  cancel: 'Cancel',
+  tryAgain: 'Try Again',
+  
+  // Date and time filters
+  quickFilters: 'Quick Filters',
+  customDateRange: 'Custom Date Range',
+  dateRange: 'Date Range',
+  fromDate: 'From Date',
+  toDate: 'To Date',
+  selectDate: 'Select Date',
+  selectDatePeriod: 'Select date period for filtering',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  thisWeek: 'This Week',
+  thisMonth: 'This Month',
+  resetToCurrentMonth: 'Reset to Current Month',
+  applyFilters: 'Apply Filters',
+
+  // Visit history
+  visitHistory: 'Visit History',
+  visitFilters: 'Visit Filters',
+  allStaff: 'All Staff',
+  allCustomers: 'All Customers',
+  allStaffVisits: 'All staff visits and activities',
+  yourVisitHistory: 'Your visit history and records',
+  loadingVisitHistory: 'Loading visit history...',
+  noVisitHistory: 'No visit history found',
+  adjustFiltersOrStartVisiting: 'Try adjusting filters or start visiting customers',
+
+  // Visit details
+  checkinTime: 'Check-in Time',
+  checkoutTime: 'Check-out Time',
+  purpose: 'Purpose',
+  notes: 'Notes',
+  
+  // Statistics
+  totalVisits: 'Total Visits',
+  completedVisits: 'Completed',
+  avgDuration: 'Avg Duration',
+  minutes: 'min',
+  distance: 'Distance',
+
+  // Check-in process
+  staffCheckin: 'Staff Check-in',
+  recordYourVisit: 'Record your customer visit',
+  selectCustomer: 'Select Customer',
+  tapToSelectCustomer: 'Tap to select customer',
+  checkinDetails: 'Check-in Details',
+  checkinType: 'Check-in Type',
+  arrival: 'Arrival',
+  departure: 'Departure',
+  enterPurpose: 'Enter purpose of visit',
+  enterNotes: 'Enter additional notes (optional)',
+  submitCheckin: 'Submit Check-in',
+
+  // Location verification
+  locationVerification: 'Location Verification',
+  locationObtained: 'Location obtained',
+  locationNotAvailable: 'Location not available',
+  refreshLocation: 'Refresh Location',
+  locationVerified: 'Location verified',
+  locationNotVerified: 'Location not verified',
+  verifyLocation: 'Verify Location',
+
+   // Set Sales Target Screen
+   setSalesTarget: 'Set Sales Target',
+  defineTargetsForPeriod: 'Define targets for specific period',
+  targetConfiguration: 'Target Configuration',
+  targetPeriod: 'Target Period',
+  targetType: 'Target Type',
+  targetDate: 'Target Date',
+  targetAmount: 'Target Amount',
+  targetAssignment: 'Target Assignment',
+  
+  // Target periods
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  yearly: 'Yearly',
+  
+  // Target types
+  revenue: 'Revenue',
+  visits: 'Visits',
+  orders: 'Orders',
+  
+  // Form fields
+  assignToStaff: 'Assign to Staff',
+  selectStaff: 'Select Staff',
+  specificCustomer: 'Specific Customer',
+  selectCustomer: 'Select Customer',
+  territory: 'Territory',
+  selectTerritory: 'Select Territory',
+  optional: 'Optional',
+  enterTargetAmount: 'Enter target amount',
+  
+  // Validation messages
+  targetAmountRequired: 'Target amount is required',
+  targetAmountMustBePositive: 'Target amount must be positive',
+  staffSelectionRequired: 'Staff selection is required',
+  salesTargetSetSuccessfully: 'Sales target set successfully',
+  failedToSetSalesTarget: 'Failed to set sales target',
+  networkErrorSettingTarget: 'Network error while setting target',
+
+  // Sales Performance Screen
+  salesPerformance: 'Sales Performance',
+  teamPerformanceAndTargets: 'Team performance and targets overview',
+  yourPerformanceAndTargets: 'Your performance and targets',
+  loadingSalesData: 'Loading sales data...',
+  
+  // Tabs
+  dashboard: 'Dashboard',
+  targets: 'Targets',
+  target: 'Target',
+  
+  // Dashboard Metrics
+  performanceStatus: 'Performance Status',
+  targetProgress: 'Target Progress',
+  achievementBreakdown: 'Achievement Breakdown',
+  
+  // Status types
+  ahead: 'Ahead of Target',
+  on_track: 'On Track',
+  behind: 'Behind Target',
+  
+  // Performance metrics
+  targetAmount: 'Target Amount',
+  achievedAmount: 'Achieved Amount',
+  remainingAmount: 'Remaining Amount',
+  daysLeft: 'Days Left',
+  dailyTargetNeeded: 'Daily Target Needed',
+  day: 'Day',
+  comparisonWithLastPeriod: 'Comparison with Last Period',
+  achieved: 'Achieved',
+  remaining: 'Remaining',
+  
+  // Empty states
+  noPerformanceData: 'No performance data found',
+  adjustFiltersToViewData: 'Adjust filters to view performance data',
+  noSalesTargets: 'No sales targets found',
+  noTargetsForPeriod: 'No targets set for this period',
+  
+  // Target details
+  setBy: 'Set By',
+  createdOn: 'Created On',
+  customer: 'Customer',
+  
+  // Error messages
+  failedToFetchPerformance: 'Failed to fetch performance data',
+  networkErrorFetchingPerformance: 'Network error while fetching performance',
+  failedToFetchTargets: 'Failed to fetch sales targets',
+  networkErrorFetchingTargets: 'Network error while fetching targets',
   },
   ar: {
     // App General
@@ -1574,6 +1751,187 @@ customerVisits: 'زيارات العملاء',
   financialFilters: 'مرشحات مالية',
   selectDateRange: 'اختر نطاق التاريخ',
   customDateRange: 'نطاق تاريخ مخصص',
+
+  // Error messages
+  error: 'خطأ',
+  authTokenNotFound: 'رمز المصادقة غير موجود',
+  dateRangeRequired: 'يرجى تحديد تاريخ البداية والنهاية',
+  invalidDateRange: 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية',
+  failedToFetchVisitHistory: 'فشل في جلب تاريخ الزيارات',
+  networkErrorFetchingVisitHistory: 'خطأ في الشبكة أثناء جلب تاريخ الزيارات',
+  failedToGetLocation: 'فشل في الحصول على الموقع الحالي',
+  locationPermissionDenied: 'تم رفض إذن الموقع',
+  selectCustomerAndLocation: 'يرجى اختيار العميل والتأكد من توفر الموقع',
+  failedToVerifyLocation: 'فشل في التحقق من الموقع',
+  networkErrorVerifyingLocation: 'خطأ في الشبكة أثناء التحقق من الموقع',
+  verifyLocationFirst: 'يرجى التحقق من الموقع أولاً',
+  purposeRequired: 'الغرض مطلوب',
+  failedToCheckin: 'فشل في إرسال تسجيل الحضور',
+  networkErrorCheckin: 'خطأ في الشبكة أثناء إرسال تسجيل الحضور',
+  locationError: 'خطأ في الموقع',
+  youAreNotInCustomerRadius: 'أنت لست ضمن نطاق موقع العميل',
+
+  // Success messages
+  success: 'نجح',
+  locationVerifiedSuccess: 'تم التحقق من الموقع بنجاح',
+  checkinSuccessful: 'تم إرسال تسجيل الحضور بنجاح',
+
+  // General actions
+  ok: 'موافق',
+  cancel: 'إلغاء',
+  tryAgain: 'حاول مرة أخرى',
+  
+  // Date and time filters
+  quickFilters: 'المرشحات السريعة',
+  customDateRange: 'نطاق تاريخ مخصص',
+  dateRange: 'نطاق التاريخ',
+  fromDate: 'من تاريخ',
+  toDate: 'إلى تاريخ',
+  selectDate: 'اختر التاريخ',
+  selectDatePeriod: 'اختر فترة التاريخ للتصفية',
+  today: 'اليوم',
+  yesterday: 'أمس',
+  thisWeek: 'هذا الأسبوع',
+  thisMonth: 'هذا الشهر',
+  resetToCurrentMonth: 'إعادة تعيين للشهر الحالي',
+  applyFilters: 'تطبيق المرشحات',
+
+  // Visit history
+  visitHistory: 'تاريخ الزيارات',
+  visitFilters: 'مرشحات الزيارات',
+  allStaff: 'جميع الموظفين',
+  allCustomers: 'جميع العملاء',
+  allStaffVisits: 'جميع زيارات وأنشطة الموظفين',
+  yourVisitHistory: 'تاريخ زياراتك وسجلاتك',
+  loadingVisitHistory: 'جاري تحميل تاريخ الزيارات...',
+  noVisitHistory: 'لم يتم العثور على تاريخ زيارات',
+  adjustFiltersOrStartVisiting: 'جرب تعديل المرشحات أو ابدأ زيارة العملاء',
+
+  // Visit details
+  checkinTime: 'وقت تسجيل الدخول',
+  checkoutTime: 'وقت تسجيل الخروج',
+  purpose: 'الغرض',
+  notes: 'ملاحظات',
+  
+  // Statistics
+  totalVisits: 'إجمالي الزيارات',
+  completedVisits: 'مكتملة',
+  avgDuration: 'متوسط المدة',
+  minutes: 'دقيقة',
+  distance: 'المسافة',
+
+  // Check-in process
+  staffCheckin: 'تسجيل حضور الموظف',
+  recordYourVisit: 'سجل زيارة العميل',
+  selectCustomer: 'اختر العميل',
+  tapToSelectCustomer: 'اضغط لاختيار العميل',
+  checkinDetails: 'تفاصيل تسجيل الحضور',
+  checkinType: 'نوع تسجيل الحضور',
+  arrival: 'وصول',
+  departure: 'مغادرة',
+  enterPurpose: 'أدخل الغرض من الزيارة',
+  enterNotes: 'أدخل ملاحظات إضافية (اختياري)',
+  submitCheckin: 'إرسال تسجيل الحضور',
+
+  // Location verification
+  locationVerification: 'التحقق من الموقع',
+  locationObtained: 'تم الحصول على الموقع',
+  locationNotAvailable: 'الموقع غير متوفر',
+  refreshLocation: 'تحديث الموقع',
+  locationVerified: 'تم التحقق من الموقع',
+  locationNotVerified: 'لم يتم التحقق من الموقع',
+  verifyLocation: 'التحقق من الموقع',
+
+
+    // Set Sales Target Screen
+ // Set Sales Target Screen
+  setSalesTarget: 'تحديد هدف المبيعات',
+  defineTargetsForPeriod: 'تحديد الأهداف لفترة محددة',
+  targetConfiguration: 'إعداد الهدف',
+  targetPeriod: 'فترة الهدف',
+  targetType: 'نوع الهدف',
+  targetDate: 'تاريخ الهدف',
+  targetAmount: 'مبلغ الهدف',
+  targetAssignment: 'تخصيص الهدف',
+  
+  // Target periods
+  monthly: 'شهري',
+  quarterly: 'ربع سنوي',
+  yearly: 'سنوي',
+  
+  // Target types
+  revenue: 'الإيرادات',
+  visits: 'الزيارات',
+  orders: 'الطلبات',
+  
+  // Form fields
+  assignToStaff: 'تخصيص للموظف',
+  selectStaff: 'اختر الموظف',
+  specificCustomer: 'عميل محدد',
+  selectCustomer: 'اختر العميل',
+  territory: 'المنطقة',
+  selectTerritory: 'اختر المنطقة',
+  optional: 'اختياري',
+  enterTargetAmount: 'أدخل مبلغ الهدف',
+  
+  // Validation messages
+  targetAmountRequired: 'مبلغ الهدف مطلوب',
+  targetAmountMustBePositive: 'يجب أن يكون مبلغ الهدف إيجابي',
+  staffSelectionRequired: 'اختيار الموظف مطلوب',
+  salesTargetSetSuccessfully: 'تم تحديد هدف المبيعات بنجاح',
+  failedToSetSalesTarget: 'فشل في تحديد هدف المبيعات',
+  networkErrorSettingTarget: 'خطأ في الشبكة أثناء تحديد الهدف',
+
+  // Sales Performance Screen
+  salesPerformance: 'أداء المبيعات',
+  teamPerformanceAndTargets: 'نظرة عامة على أداء الفريق والأهداف',
+  yourPerformanceAndTargets: 'أداؤك وأهدافك',
+  loadingSalesData: 'جاري تحميل بيانات المبيعات...',
+  
+  // Tabs
+  dashboard: 'لوحة التحكم',
+  targets: 'الأهداف',
+  target: 'هدف',
+  
+  // Dashboard Metrics
+  performanceStatus: 'حالة الأداء',
+  targetProgress: 'تقدم الهدف',
+  achievementBreakdown: 'تفصيل الإنجاز',
+  
+  // Status types
+  ahead: 'متقدم عن الهدف',
+  on_track: 'على المسار الصحيح',
+  behind: 'متأخر عن الهدف',
+  
+  // Performance metrics
+  targetAmount: 'مبلغ الهدف',
+  achievedAmount: 'المبلغ المحقق',
+  remainingAmount: 'المبلغ المتبقي',
+  daysLeft: 'الأيام المتبقية',
+  dailyTargetNeeded: 'الهدف اليومي المطلوب',
+  day: 'يوم',
+  comparisonWithLastPeriod: 'المقارنة مع الفترة السابقة',
+  achieved: 'محقق',
+  remaining: 'متبقي',
+  
+  // Empty states
+  noPerformanceData: 'لم يتم العثور على بيانات الأداء',
+  adjustFiltersToViewData: 'قم بتعديل المرشحات لعرض بيانات الأداء',
+  noSalesTargets: 'لم يتم العثور على أهداف مبيعات',
+  noTargetsForPeriod: 'لم يتم تحديد أهداف لهذه الفترة',
+  
+  // Target details
+  setBy: 'تم التحديد بواسطة',
+  createdOn: 'تم الإنشاء في',
+  customer: 'العميل',
+  
+  // Error messages
+  failedToFetchPerformance: 'فشل في جلب بيانات الأداء',
+  networkErrorFetchingPerformance: 'خطأ في الشبكة أثناء جلب الأداء',
+  failedToFetchTargets: 'فشل في جلب أهداف المبيعات',
+  networkErrorFetchingTargets: 'خطأ في الشبكة أثناء جلب الأهداف',
+
+
   }
 };
 
