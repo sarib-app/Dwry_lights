@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,27 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
+import getUserRole from '../Globals/Store/GetRoleId';
 
 const { width } = Dimensions.get('window');
+  // import getUserRole from './getUserRole';
 
 const ActionsScreen = ({navigation}) => {
   const translate = (key) => languageService.translate(key);
+
+// Use anywhere in your app
+const [roleId, setRoleId] = React.useState(null);
+useEffect(() => {
+  
+// Example usage
+const checkUserRole = async () => {
+  const role = await getUserRole();
+  setRoleId(role);
+};
+
+checkUserRole();
+
+},[])
 
   const actionItems = [
     // Core Business
@@ -27,6 +43,7 @@ const ActionsScreen = ({navigation}) => {
     // People Management
     { id: 4, title: 'Customers', icon: 'people', color: '#E74C3C', category: 'people' },
     { id: 5, title: 'Staff', icon: 'person-circle', color: '#9B59B6', category: 'people' },
+    { id: 15, title: 'User', icon: 'person', color: '#9B59B6', category: 'people' },
     { id: 6, title: 'Suppliers', icon: 'business', color: '#F39C12', category: 'people' },
     
     // Financial
@@ -76,6 +93,13 @@ else if(actionTitle === 'Payments'){
 }
 else if(actionTitle === 'Banks'){
   navigation.navigate('BankListScreen');
+}
+else if(actionTitle === 'Staff'){
+  navigation.navigate('Staffmanagment');
+}
+
+else if(actionTitle === 'User'){
+  navigation.navigate('UserManagementScreen');
 }
 else {
     Alert.alert(

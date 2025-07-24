@@ -967,6 +967,234 @@ customerVisits: 'Customer Visits',
   networkErrorFetchingPerformance: 'Network error while fetching performance',
   failedToFetchTargets: 'Failed to fetch sales targets',
   networkErrorFetchingTargets: 'Network error while fetching targets',
+
+
+    // Staff Management Screen
+  staffManagement: 'Staff Management',
+  manageTeamMembers: 'Manage your team members',
+  searchStaff: 'Search staff members...',
+  totalStaff: 'Total Staff',
+  activeStaff: 'Active',
+  inactiveStaff: 'Inactive',
+  loadingStaff: 'Loading staff...',
+  
+  // Staff Status
+  active: 'Active',
+  inactive: 'Inactive',
+  suspended: 'Suspended',
+  
+  // Staff Details
+  hiredOn: 'Hired on',
+  salary: 'Salary',
+  
+  // Actions
+  edit: 'Edit',
+  delete: 'Delete',
+  confirmDelete: 'Confirm Delete',
+  confirmDeleteStaff: 'Are you sure you want to delete',
+  
+  // Empty States
+  noStaffFound: 'No staff found',
+  noStaffMembers: 'No staff members yet',
+  tryDifferentSearch: 'Try a different search term',
+  addFirstStaffMember: 'Add your first team member',
+  
+  // Add/Edit Staff Screen
+  addStaff: 'Add Staff',
+  editStaff: 'Edit Staff',
+  updateStaffDetails: 'Update staff member details',
+  addNewTeamMember: 'Add a new team member',
+  updateStaff: 'Update Staff',
+  
+  // Form Sections
+  basicInformation: 'Basic Information',
+  jobInformation: 'Job Information',
+  additionalInformation: 'Additional Information',
+  
+  // Form Fields
+  fullName: 'Full Name',
+  arabicName: 'Arabic Name',
+  email: 'Email',
+  phone: 'Phone',
+  position: 'Position',
+  department: 'Department',
+  hireDate: 'Hire Date',
+  territoryAssigned: 'Territory Assigned',
+  status: 'Status',
+  address: 'Address',
+  
+  // Form Placeholders
+  enterFullName: 'Enter full name',
+  enterArabicName: 'Enter Arabic name',
+  enterEmail: 'Enter email address',
+  enterPhone: 'Enter phone number',
+  enterPosition: 'Enter job position',
+  enterDepartment: 'Enter department',
+  enterSalary: 'Enter salary amount',
+  enterTerritory: 'Enter assigned territory',
+  enterAddress: 'Enter address',
+  
+  // Validation Messages
+  nameRequired: 'Name is required',
+  emailRequired: 'Email is required',
+  invalidEmail: 'Please enter a valid email',
+  phoneRequired: 'Phone number is required',
+  positionRequired: 'Position is required',
+  departmentRequired: 'Department is required',
+  salaryRequired: 'Salary is required',
+  invalidSalary: 'Please enter a valid salary amount',
+  pleaseFillRequiredFields: 'Please fill in all required fields',
+  
+  // Success Messages
+  staffAddedSuccessfully: 'Staff member added successfully',
+  staffUpdatedSuccessfully: 'Staff member updated successfully',
+  staffDeletedSuccessfully: 'Staff member deleted successfully',
+  
+  // Error Messages
+  failedToFetchStaff: 'Failed to fetch staff members',
+  networkErrorFetchingStaff: 'Network error while fetching staff',
+  failedToAddStaff: 'Failed to add staff member',
+  networkErrorAddingStaff: 'Network error while adding staff',
+  failedToUpdateStaff: 'Failed to update staff member',
+  networkErrorUpdatingStaff: 'Network error while updating staff',
+  failedToDeleteStaff: 'Failed to delete staff member',
+  networkErrorDeletingStaff: 'Network error while deleting staff',
+  // User Management Screen
+  userManagement: 'User Management',
+  manageSystemUsers: 'Manage system users and roles',
+  searchUsers: 'Search users...',
+  totalUsers: 'Total Users',
+  adminUsers: 'Admins',
+  staffUsers: 'Staff',
+  loadingUsers: 'Loading users...',
+  
+  // User Roles
+  superadmin: 'Super Admin',
+  admin: 'Admin',
+  staff: 'Staff',
+  
+  // User Details
+  iqamaNo: 'Iqama No',
+  dateOfBirth: 'Date of Birth',
+  registeredOn: 'Registered on',
+  currentUser: 'Current User',
+  
+  // Actions
+  edit: 'Edit',
+  delete: 'Delete',
+  confirmDelete: 'Confirm Delete',
+  confirmDeleteUser: 'Are you sure you want to delete',
+  cannotDeleteOwnAccount: 'You cannot delete your own account',
+  
+  // Empty States
+  noUsersFound: 'No users found',
+  noUsers: 'No users yet',
+  tryDifferentSearch: 'Try a different search term',
+  addFirstUser: 'Add your first system user',
+  
+  // Add/Edit User Screen
+  addUser: 'Add User',
+  editUser: 'Edit User',
+  updateUserDetails: 'Update user details',
+  addNewSystemUser: 'Add a new system user',
+  updateUser: 'Update User',
+  
+  // Form Sections
+  personalInformation: 'Personal Information',
+  systemAccess: 'System Access',
+  
+  // Form Fields
+  firstName: 'First Name',
+  lastName: 'Last Name',
+  email: 'Email',
+  iqamaNumber: 'Iqama Number',
+  userRole: 'User Role',
+  password: 'Password',
+  confirmPassword: 'Confirm Password',
+  
+  // Form Placeholders
+  enterFirstName: 'Enter first name',
+  enterLastName: 'Enter last name',
+  enterEmail: 'Enter email address',
+  enterIqamaNumber: 'Enter Iqama number',
+  enterPassword: 'Enter password',
+  confirmYourPassword: 'Confirm your password',
+  leaveBlankToKeepCurrent: 'Leave blank to keep current password',
+  
+  // Password Requirements
+  passwordRequirements: 'Password Requirements',
+  minEightCharacters: 'Minimum 8 characters',
+  passwordsMustMatch: 'Passwords must match',
+  
+  // Validation Messages
+  firstNameRequired: 'First name is required',
+  lastNameRequired: 'Last name is required',
+  emailRequired: 'Email is required',
+  invalidEmail: 'Please enter a valid email',
+  iqamaRequired: 'Iqama number is required',
+  passwordRequired: 'Password is required',
+  passwordTooShort: 'Password must be at least 8 characters',
+  confirmPasswordRequired: 'Please confirm your password',
+  passwordsDoNotMatch: 'Passwords do not match',
+  pleaseFillRequiredFields: 'Please fill in all required fields',
+  
+  // Success Messages
+  userAddedSuccessfully: 'User added successfully',
+  userUpdatedSuccessfully: 'User updated successfully',
+  userDeletedSuccessfully: 'User deleted successfully',
+  
+  // Error Messages
+  failedToFetchUsers: 'Failed to fetch users',
+  networkErrorFetchingUsers: 'Network error while fetching users',
+  failedToAddUser: 'Failed to add user',
+  networkErrorAddingUser: 'Network error while adding user',
+  failedToUpdateUser: 'Failed to update user',
+  networkErrorUpdatingUser: 'Network error while updating user',
+  failedToDeleteUser: 'Failed to delete user',
+  networkErrorDeletingUser: 'Network error while deleting user',
+    // Settings Screen
+  settings: 'Settings',
+  manageYourPreferences: 'Manage your app preferences',
+  
+  // User Profile
+  user: 'User',
+  
+  // Section Titles
+  legal: 'Legal',
+  support: 'Support',
+  account: 'Account',
+  
+  // Menu Items
+  termsAndConditions: 'Terms and Conditions',
+  privacyPolicy: 'Privacy Policy',
+  help: 'Help',
+  aboutUs: 'About Us',
+  logout: 'Logout',
+  
+  // Email Help
+  helpRequest: 'Help Request - Dory Sales App',
+  pleaseDescribeYourIssue: 'Please describe your issue or question here...',
+  contactUs: 'Contact Us',
+  pleaseContactUs: 'Please contact us at:',
+  
+  // Logout Confirmation
+  confirmLogout: 'Confirm Logout',
+  areYouSureLogout: 'Are you sure you want to logout?',
+  cancel: 'Cancel',
+  
+  // App Info
+  appVersion: 'App Version',
+  
+  // Success Messages
+  ok: 'OK',
+  
+  // Error Messages
+  error: 'Error',
+  cannotOpenLink: 'Cannot open this link',
+  failedToOpenLink: 'Failed to open link',
+  failedToOpenEmail: 'Failed to open email client',
+  logoutFailed: 'Logout failed. Please try again.',
+
   },
   ar: {
     // App General
@@ -1931,6 +2159,235 @@ customerVisits: 'زيارات العملاء',
   failedToFetchTargets: 'فشل في جلب أهداف المبيعات',
   networkErrorFetchingTargets: 'خطأ في الشبكة أثناء جلب الأهداف',
 
+
+   // Staff Management Screen
+  staffManagement: 'إدارة الموظفين',
+  manageTeamMembers: 'إدارة أعضاء فريقك',
+  searchStaff: 'البحث في الموظفين...',
+  totalStaff: 'إجمالي الموظفين',
+  activeStaff: 'نشط',
+  inactiveStaff: 'غير نشط',
+  loadingStaff: 'جاري تحميل الموظفين...',
+  
+  // Staff Status
+  active: 'نشط',
+  inactive: 'غير نشط',
+  suspended: 'معلق',
+  
+  // Staff Details
+  hiredOn: 'تم التوظيف في',
+  salary: 'الراتب',
+  
+  // Actions
+  edit: 'تعديل',
+  delete: 'حذف',
+  confirmDelete: 'تأكيد الحذف',
+  confirmDeleteStaff: 'هل أنت متأكد من حذف',
+  
+  // Empty States
+  noStaffFound: 'لم يتم العثور على موظفين',
+  noStaffMembers: 'لا يوجد موظفون بعد',
+  tryDifferentSearch: 'جرب مصطلح بحث مختلف',
+  addFirstStaffMember: 'أضف أول عضو في فريقك',
+  
+  // Add/Edit Staff Screen
+  addStaff: 'إضافة موظف',
+  editStaff: 'تعديل الموظف',
+  updateStaffDetails: 'تحديث تفاصيل الموظف',
+  addNewTeamMember: 'إضافة عضو جديد للفريق',
+  updateStaff: 'تحديث الموظف',
+  
+  // Form Sections
+  basicInformation: 'المعلومات الأساسية',
+  jobInformation: 'معلومات الوظيفة',
+  additionalInformation: 'معلومات إضافية',
+  
+  // Form Fields
+  fullName: 'الاسم الكامل',
+  arabicName: 'الاسم بالعربية',
+  email: 'البريد الإلكتروني',
+  phone: 'الهاتف',
+  position: 'المنصب',
+  department: 'القسم',
+  hireDate: 'تاريخ التوظيف',
+  territoryAssigned: 'المنطقة المخصصة',
+  status: 'الحالة',
+  address: 'العنوان',
+  
+  // Form Placeholders
+  enterFullName: 'أدخل الاسم الكامل',
+  enterArabicName: 'أدخل الاسم بالعربية',
+  enterEmail: 'أدخل عنوان البريد الإلكتروني',
+  enterPhone: 'أدخل رقم الهاتف',
+  enterPosition: 'أدخل المنصب الوظيفي',
+  enterDepartment: 'أدخل القسم',
+  enterSalary: 'أدخل مبلغ الراتب',
+  enterTerritory: 'أدخل المنطقة المخصصة',
+  enterAddress: 'أدخل العنوان',
+  
+  // Validation Messages
+  nameRequired: 'الاسم مطلوب',
+  emailRequired: 'البريد الإلكتروني مطلوب',
+  invalidEmail: 'يرجى إدخال بريد إلكتروني صحيح',
+  phoneRequired: 'رقم الهاتف مطلوب',
+  positionRequired: 'المنصب مطلوب',
+  departmentRequired: 'القسم مطلوب',
+  salaryRequired: 'الراتب مطلوب',
+  invalidSalary: 'يرجى إدخال مبلغ راتب صحيح',
+  pleaseFillRequiredFields: 'يرجى ملء جميع الحقول المطلوبة',
+  
+  // Success Messages
+  staffAddedSuccessfully: 'تم إضافة الموظف بنجاح',
+  staffUpdatedSuccessfully: 'تم تحديث الموظف بنجاح',
+  staffDeletedSuccessfully: 'تم حذف الموظف بنجاح',
+  
+  // Error Messages
+  failedToFetchStaff: 'فشل في جلب الموظفين',
+  networkErrorFetchingStaff: 'خطأ في الشبكة أثناء جلب الموظفين',
+  failedToAddStaff: 'فشل في إضافة الموظف',
+  networkErrorAddingStaff: 'خطأ في الشبكة أثناء إضافة الموظف',
+  failedToUpdateStaff: 'فشل في تحديث الموظف',
+  networkErrorUpdatingStaff: 'خطأ في الشبكة أثناء تحديث الموظف',
+  failedToDeleteStaff: 'فشل في حذف الموظف',
+  networkErrorDeletingStaff: 'خطأ في الشبكة أثناء حذف الموظف',
+
+
+  // User Management Screen
+  userManagement: 'إدارة المستخدمين',
+  manageSystemUsers: 'إدارة مستخدمي النظام والأدوار',
+  searchUsers: 'البحث في المستخدمين...',
+  totalUsers: 'إجمالي المستخدمين',
+  adminUsers: 'المدراء',
+  staffUsers: 'الموظفين',
+  loadingUsers: 'جاري تحميل المستخدمين...',
+  
+  // User Roles
+  superadmin: 'مدير عام',
+  admin: 'مدير',
+  staff: 'موظف',
+  
+  // User Details
+  iqamaNo: 'رقم الإقامة',
+  dateOfBirth: 'تاريخ الميلاد',
+  registeredOn: 'تم التسجيل في',
+  currentUser: 'المستخدم الحالي',
+  
+  // Actions
+  edit: 'تعديل',
+  delete: 'حذف',
+  confirmDelete: 'تأكيد الحذف',
+  confirmDeleteUser: 'هل أنت متأكد من حذف',
+  cannotDeleteOwnAccount: 'لا يمكنك حذف حسابك الخاص',
+  
+  // Empty States
+  noUsersFound: 'لم يتم العثور على مستخدمين',
+  noUsers: 'لا يوجد مستخدمون بعد',
+  tryDifferentSearch: 'جرب مصطلح بحث مختلف',
+  addFirstUser: 'أضف أول مستخدم للنظام',
+  
+  // Add/Edit User Screen
+  addUser: 'إضافة مستخدم',
+  editUser: 'تعديل المستخدم',
+  updateUserDetails: 'تحديث تفاصيل المستخدم',
+  addNewSystemUser: 'إضافة مستخدم جديد للنظام',
+  updateUser: 'تحديث المستخدم',
+  
+  // Form Sections
+  personalInformation: 'المعلومات الشخصية',
+  systemAccess: 'الوصول للنظام',
+  
+  // Form Fields
+  firstName: 'الاسم الأول',
+  lastName: 'اسم العائلة',
+  email: 'البريد الإلكتروني',
+  iqamaNumber: 'رقم الإقامة',
+  userRole: 'دور المستخدم',
+  password: 'كلمة المرور',
+  confirmPassword: 'تأكيد كلمة المرور',
+  
+  // Form Placeholders
+  enterFirstName: 'أدخل الاسم الأول',
+  enterLastName: 'أدخل اسم العائلة',
+  enterEmail: 'أدخل عنوان البريد الإلكتروني',
+  enterIqamaNumber: 'أدخل رقم الإقامة',
+  enterPassword: 'أدخل كلمة المرور',
+  confirmYourPassword: 'أكد كلمة المرور',
+  leaveBlankToKeepCurrent: 'اتركه فارغاً للاحتفاظ بكلمة المرور الحالية',
+  
+  // Password Requirements
+  passwordRequirements: 'متطلبات كلمة المرور',
+  minEightCharacters: 'الحد الأدنى 8 أحرف',
+  passwordsMustMatch: 'يجب أن تتطابق كلمات المرور',
+  
+  // Validation Messages
+  firstNameRequired: 'الاسم الأول مطلوب',
+  lastNameRequired: 'اسم العائلة مطلوب',
+  emailRequired: 'البريد الإلكتروني مطلوب',
+  invalidEmail: 'يرجى إدخال بريد إلكتروني صحيح',
+  iqamaRequired: 'رقم الإقامة مطلوب',
+  passwordRequired: 'كلمة المرور مطلوبة',
+  passwordTooShort: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل',
+  confirmPasswordRequired: 'يرجى تأكيد كلمة المرور',
+  passwordsDoNotMatch: 'كلمات المرور غير متطابقة',
+  pleaseFillRequiredFields: 'يرجى ملء جميع الحقول المطلوبة',
+  
+  // Success Messages
+  userAddedSuccessfully: 'تم إضافة المستخدم بنجاح',
+  userUpdatedSuccessfully: 'تم تحديث المستخدم بنجاح',
+  userDeletedSuccessfully: 'تم حذف المستخدم بنجاح',
+  
+  // Error Messages
+  failedToFetchUsers: 'فشل في جلب المستخدمين',
+  networkErrorFetchingUsers: 'خطأ في الشبكة أثناء جلب المستخدمين',
+  failedToAddUser: 'فشل في إضافة المستخدم',
+  networkErrorAddingUser: 'خطأ في الشبكة أثناء إضافة المستخدم',
+  failedToUpdateUser: 'فشل في تحديث المستخدم',
+  networkErrorUpdatingUser: 'خطأ في الشبكة أثناء تحديث المستخدم',
+  failedToDeleteUser: 'فشل في حذف المستخدم',
+  networkErrorDeletingUser: 'خطأ في الشبكة أثناء حذف المستخدم',
+
+   // Settings Screen
+  settings: 'الإعدادات',
+  manageYourPreferences: 'إدارة تفضيلات التطبيق',
+  
+  // User Profile
+  user: 'مستخدم',
+  
+  // Section Titles
+  legal: 'قانوني',
+  support: 'الدعم',
+  account: 'الحساب',
+  
+  // Menu Items
+  termsAndConditions: 'الشروط والأحكام',
+  privacyPolicy: 'سياسة الخصوصية',
+  help: 'المساعدة',
+  aboutUs: 'من نحن',
+  logout: 'تسجيل الخروج',
+  
+  // Email Help
+  helpRequest: 'طلب مساعدة - تطبيق دوري للمبيعات',
+  pleaseDescribeYourIssue: 'يرجى وصف مشكلتك أو سؤالك هنا...',
+  contactUs: 'اتصل بنا',
+  pleaseContactUs: 'يرجى التواصل معنا على:',
+  
+  // Logout Confirmation
+  confirmLogout: 'تأكيد تسجيل الخروج',
+  areYouSureLogout: 'هل أنت متأكد من تسجيل الخروج؟',
+  cancel: 'إلغاء',
+  
+  // App Info
+  appVersion: 'إصدار التطبيق',
+  
+  // Success Messages
+  ok: 'موافق',
+  
+  // Error Messages
+  error: 'خطأ',
+  cannotOpenLink: 'لا يمكن فتح هذا الرابط',
+  failedToOpenLink: 'فشل في فتح الرابط',
+  failedToOpenEmail: 'فشل في فتح تطبيق البريد الإلكتروني',
+  logoutFailed: 'فشل في تسجيل الخروج. يرجى المحاولة مرة أخرى.',
 
   }
 };

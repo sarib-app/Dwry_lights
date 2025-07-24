@@ -26,7 +26,7 @@ const MainBottomTabs = () => {
           let iconName;
           
           if (route.name === 'Insights') iconName = focused ? 'analytics' : 'analytics-outline';
-          else if (route.name === 'Actions') iconName = focused ? 'analytics' : 'analytics-outline';
+          else if (route.name === 'Actions') iconName = focused ? 'menu' : 'menu-outline';
           else if (route.name === 'Notifications') iconName = focused ? 'notifications' : 'notifications-outline';
           else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
 
@@ -55,11 +55,11 @@ const MainBottomTabs = () => {
         component={ActionsScreen}
         options={{ tabBarLabel: translate('actions') }}
       />
-      <Tab.Screen 
+      {/* <Tab.Screen 
         name="Notifications" 
         component={NotificationsScreen}
         options={{ tabBarLabel: translate('notifications') }}
-      />
+      /> */}
       <Tab.Screen 
         name="Settings" 
         component={SettingsScreen}

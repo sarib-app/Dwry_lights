@@ -49,6 +49,10 @@ import VisitHistoryFiltersScreen from '../Staff/StaffFilter';
 import StaffVisitHistoryScreen from '../Staff/StaffVisit';
 import SetSalesTargetScreen from '../SalesTarget/SetSalesTarget';
 import SalesPerformanceScreen from '../SalesTarget/SalesPerformance';
+import StaffManagementScreen from '../StaffManagmentSrc/StaffManagmentScree';
+import AddEditStaffScreen from '../StaffManagmentSrc/AddEditStaff';
+import UserManagementScreen from '../UserManagmentScreen.js/UserManagmentScreen';
+import AddEditUserScreen from '../UserManagmentScreen.js/AddEditUser';
 
 const Stack = createStackNavigator();
 
@@ -119,6 +123,15 @@ const AuthStack = () => {
 
 <Stack.Screen name="setSalesTarget" component={SetSalesTargetScreen} options={{ headerShown: false }} />
 <Stack.Screen name="salesTargetReport" component={SalesPerformanceScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="Staffmanagment" component={StaffManagementScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddEditStaffScreen" component={AddEditStaffScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="UserManagementScreen" component={UserManagementScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddEditUserScreen" component={AddEditUserScreen} options={{ headerShown: false }} />
+
+
+
 
 
 
