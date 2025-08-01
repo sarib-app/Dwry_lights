@@ -288,7 +288,7 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
                 </tr>
             </thead>
             <tbody>
-                ${invoice.items?.map(item => `
+                ${JSON.parse(invoice.items)?.map(item => `
                     <tr>
                         <td>${item.description}</td>
                         <td>${item.qty}</td>
@@ -391,7 +391,7 @@ ${translate('totalAmount')}: ${formatCurrency(invoice.total_amount)}
 ${translate('paymentStatus')}: ${translate(invoice.payment_status)}
 
 ${translate('items')}:
-${invoice.items?.map(item => `• ${item.description} - ${translate('qty')}: ${item.qty} - ${formatCurrency(item.qty * item.price)}`).join('\n') || ''}
+${JSON.parse(invoice.items)?.map(item => `• ${item.description} - ${translate('qty')}: ${item.qty} - ${formatCurrency(item.qty * item.price)}`).join('\n') || ''}
 
 ${translate('generatedBy')} ${translate('appName')}
       `.trim();
@@ -562,11 +562,11 @@ ${translate('generatedBy')} ${translate('appName')}
           <View style={[styles.sectionHeader, isRTL && styles.rtlSectionHeader]}>
             <Ionicons name="list" size={24} color="#6B7D3D" />
             <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
-              {translate('invoiceItems')} ({invoice.items?.length || 0})
+              {translate('invoiceItems')} ({JSON.parse(invoice.items)?.length || 0})
             </Text>
           </View>
           
-          {invoice.items?.map((item, index) => (
+          {JSON.parse(invoice.items)?.map((item, index) => (
             <View key={index} style={styles.itemCard}>
               <View style={[styles.itemHeader, isRTL && styles.rtlItemHeader]}>
                 <Text style={[styles.itemDescription, isRTL && styles.arabicText]}>

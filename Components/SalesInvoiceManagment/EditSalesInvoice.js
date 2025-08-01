@@ -28,7 +28,7 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
     invoice_number: invoice.invoice_number || '',
     invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],
     due_date: invoice.due_date || '',
-    items: invoice.items || [],
+    items: JSON.parse(invoice.items) || [],
     subtotal: parseFloat(invoice.subtotal || 0),
     tax_percentage: parseFloat(invoice.tax_percentage || 15),
     tax_amount: parseFloat(invoice.tax_amount || 0),
