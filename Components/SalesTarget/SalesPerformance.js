@@ -35,7 +35,9 @@ const SalesPerformanceScreen = ({ navigation }) => {
   // Data states
   const [performanceData, setPerformanceData] = useState(null);
   const [salesTargets, setSalesTargets] = useState([]);
+  const [filteredTargets, setFilteredTargets] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'targets'
+  const [activeTargetTab, setActiveTargetTab] = useState('customers'); // 'customers', 'staff', 'staffPerCustomer'
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -55,6 +57,17 @@ const SalesPerformanceScreen = ({ navigation }) => {
   useEffect(() => {
     initializeScreen();
   }, []);
+
+  useEffect(() => {
+    filterTargetsByTab();
+  }, [salesTargets, activeTargetTab]);
+
+  // Add this new useEffect to refetch data when filters change
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [filters.period, filters.staff_id, filters.customer_id, filters.territory]);
 
   const initializeScreen = async () => {
     const language = await languageService.loadSavedLanguage();
@@ -95,6 +108,47 @@ const SalesPerformanceScreen = ({ navigation }) => {
     }
   };
 
+  // Filter targets by active tab
+  const filterTargetsByTab = () => {
+    // Always filter from the original salesTargets data, not from filteredTargets
+    let filtered = [];
+    
+    console.log('Original Sales Targets:', salesTargets);
+    console.log('Active Target Tab:', activeTargetTab);
+    
+    switch (activeTargetTab) {
+      case 'customers':
+        // Show records where customer_id is not null but staff_id is null
+        filtered = salesTargets.filter(target => {
+          const isCustomerOnly = target.customer_id != null && target.staff_id == null;
+          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isCustomerOnly=${isCustomerOnly}`);
+          return isCustomerOnly;
+        });
+        break;
+      case 'staff':
+        // Show records where staff_id is not null but customer_id is null
+        filtered = salesTargets.filter(target => {
+          const isStaffOnly = target.staff_id != null && target.customer_id == null;
+          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isStaffOnly=${isStaffOnly}`);
+          return isStaffOnly;
+        });
+        break;
+      case 'staffPerCustomer':
+        // Show records where both customer_id and staff_id are not null
+        filtered = salesTargets.filter(target => {
+          const isBoth = target.customer_id != null && target.staff_id != null;
+          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isBoth=${isBoth}`);
+          return isBoth;
+        });
+        break;
+      default:
+        filtered = salesTargets;
+    }
+    
+    console.log('Filtered Results:', filtered);
+    setFilteredTargets(filtered);
+  };
+
   // Fetch performance data
   const fetchPerformanceData = async () => {
     const token = await getAuthToken();
@@ -105,7 +159,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
     try {
       const payload = {
-        period: filters.period,
+        period: filters.period, // Updated format: YYYY-MM
       };
 
       // Add optional filters
@@ -152,7 +206,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
     try {
       const payload = {
-        target_date: `${filters.period}-01`, // Convert YYYY-MM to YYYY-MM-01
+        target_date: filters.period, // Updated format: YYYY-MM
       };
 
       // Add optional filters
@@ -209,15 +263,13 @@ const SalesPerformanceScreen = ({ navigation }) => {
     fetchData();
   }, [filters]);
 
-  // Handle period change
+  // Handle period change - Remove the setTimeout and call fetchData directly
   const handlePeriodChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
       const period = selectedDate.toISOString().slice(0, 7);
       setFilters(prev => ({ ...prev, period }));
-      setTimeout(() => {
-        fetchData();
-      }, 100);
+      // Data will be fetched automatically by the useEffect above
     }
   };
 
@@ -265,7 +317,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
                 ...prev,
                 staff_id: staff ? staff.id : null
               }));
-              setTimeout(() => fetchData(), 100);
+              // Data will be fetched automatically by the useEffect
             }
           })}
         >
@@ -290,7 +342,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
               ...prev,
               customer_id: customer ? customer.id : null
             }));
-            setTimeout(() => fetchData(), 100);
+            // Data will be fetched automatically by the useEffect
           }
         })}
       >
@@ -371,6 +423,78 @@ const SalesPerformanceScreen = ({ navigation }) => {
       </TouchableOpacity>
     </View>
   );
+
+  // Render target sub-tabs
+  const renderTargetSubTabs = () => {
+    if (activeTab !== 'targets') return null;
+
+    return (
+      <View style={styles.subTabContainer}>
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeTargetTab === 'customers' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveTargetTab('customers')}
+        >
+          <Ionicons 
+            name="person" 
+            size={14} 
+            color={activeTargetTab === 'customers' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeTargetTab === 'customers' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('customers')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeTargetTab === 'staff' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveTargetTab('staff')}
+        >
+          <Ionicons 
+            name="people" 
+            size={14} 
+            color={activeTargetTab === 'staff' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeTargetTab === 'staff' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('staff')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeTargetTab === 'staffPerCustomer' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveTargetTab('staffPerCustomer')}
+        >
+          <Ionicons 
+            name="people-circle" 
+            size={14} 
+            color={activeTargetTab === 'staffPerCustomer' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeTargetTab === 'staffPerCustomer' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('staffPerCustomer')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // Render main performance overview
   const renderPerformanceOverview = () => {
@@ -624,82 +748,206 @@ const SalesPerformanceScreen = ({ navigation }) => {
     );
   };
 
-  // Render sales target item
-  const renderTargetItem = ({ item }) => (
-    <View style={[styles.targetCard, isRTL && styles.rtlTargetCard]}>
-      <View style={[styles.targetHeader, isRTL && styles.rtlTargetHeader]}>
-        <View style={styles.targetInfo}>
-          <Text style={[styles.targetTitle, isRTL && commonStyles.arabicText]}>
-            {translate(item.target_type)} {translate('target')}
-          </Text>
-          <Text style={[styles.targetPeriod, isRTL && commonStyles.arabicText]}>
-            {translate(item.target_period)} • {new Date(item.target_date).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
-          </Text>
-        </View>
-        
-        <View style={[styles.targetBadge, { backgroundColor: `rgba(107, 125, 61, 0.1)` }]}>
-          <Ionicons name="flag" size={16} color="#6B7D3D" />
-          <Text style={[styles.targetAmount, isRTL && commonStyles.arabicText]}>
-            {parseFloat(item.target_amount).toLocaleString()}
-          </Text>
-        </View>
-      </View>
+  // Render enhanced sales target item with progress bars
+  const renderTargetItem = ({ item }) => {
+    const targetAmount = parseFloat(item.target_amount) || 0;
+    const achievedAmount = parseFloat(item.achieved_amount) || 0;
+    const pendingTargetAmount = parseFloat(item.pending_target_amount) || 0; // Updated field name
+    const pendingInvoiceAmount = parseFloat(item.pending_invoice_amount) || 0; // New field
+    const totalSalesAmount = achievedAmount + pendingInvoiceAmount; // Calculated field
+    
+    const achievementPercentage = targetAmount > 0 ? (achievedAmount / targetAmount) * 100 : 0;
+    const totalSalesPercentage = targetAmount > 0 ? (totalSalesAmount / targetAmount) * 100 : 0;
 
-      <View style={styles.targetDetails}>
-        {/* Territory */}
-        {item.territory && (
-          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-            <Ionicons name="map" size={16} color="#666" />
-            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-              {translate('territory')}:
+    return (
+      <View style={[styles.targetCard, isRTL && styles.rtlTargetCard]}>
+        <View style={[styles.targetHeader, isRTL && styles.rtlTargetHeader]}>
+          <View style={styles.targetInfo}>
+            <Text style={[styles.targetTitle, isRTL && commonStyles.arabicText]}>
+              {translate(item.target_type)} {translate('target')}
             </Text>
-            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-              {item.territory}
+            <Text style={[styles.targetPeriod, isRTL && commonStyles.arabicText]}>
+              {translate(item.target_period)} • {new Date(item.target_date + '-01').toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
             </Text>
           </View>
-        )}
-
-        {/* Customer */}
-        {item.customer_name && (
-          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-            <Ionicons name="person" size={16} color="#666" />
-            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-              {translate('customer')}:
-            </Text>
-            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-              {item.customer_name}
+          
+          <View style={[styles.targetBadge, { backgroundColor: `rgba(107, 125, 61, 0.1)` }]}>
+            <Ionicons name="flag" size={16} color="#6B7D3D" />
+            <Text style={[styles.targetAmount, isRTL && commonStyles.arabicText]}>
+              {targetAmount.toLocaleString()}
             </Text>
           </View>
-        )}
-
-        {/* Set By */}
-        <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-          <Ionicons name="person-circle" size={16} color="#666" />
-          <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-            {translate('setBy')}:
-          </Text>
-          <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-            {item.set_by_first_name} {item.set_by_last_name}
-          </Text>
         </View>
 
-        {/* Created Date */}
-        <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-          <Ionicons name="calendar" size={16} color="#666" />
-          <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-            {translate('createdOn')}:
+        {/* Progress Chart */}
+        <View style={styles.targetProgressContainer}>
+          <Text style={[styles.progressTitle, isRTL && commonStyles.arabicText]}>
+            {translate('progress')} - {achievementPercentage.toFixed(1)}%
           </Text>
-          <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-            {new Date(item.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
-          </Text>
+
+          {/* Primary Progress Bar - Target vs Achieved vs Pending Target */}
+          <View style={styles.progressBarSection}>
+            <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+              {translate('targetProgress')}
+            </Text>
+            <View style={styles.multiProgressBar}>
+              <View 
+                style={[
+                  styles.progressSegment,
+                  styles.achievedSegment,
+                  { width: `${Math.min((achievedAmount / targetAmount) * 100, 100)}%` }
+                ]}
+              />
+              <View 
+                style={[
+                  styles.progressSegment,
+                  styles.pendingTargetSegment,
+                  { width: `${Math.min((pendingTargetAmount / targetAmount) * 100, 100)}%` }
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Secondary Progress Bar - Total Sales Amount */}
+          <View style={styles.progressBarSection}>
+            <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+              {translate('totalSales')} - {totalSalesPercentage.toFixed(1)}%
+            </Text>
+            <View style={styles.multiProgressBar}>
+              <View 
+                style={[
+                  styles.progressSegment,
+                  styles.totalSalesSegment,
+                  { width: `${Math.min(totalSalesPercentage, 100)}%` }
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Pending Invoice Progress Bar */}
+          <View style={styles.progressBarSection}>
+            <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+              {translate('pendingInvoices')}
+            </Text>
+            <View style={styles.multiProgressBar}>
+              <View 
+                style={[
+                  styles.progressSegment,
+                  styles.pendingInvoiceSegment,
+                  { width: `${Math.min((pendingInvoiceAmount / targetAmount) * 100, 100)}%` }
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Progress Legend */}
+          <View style={styles.progressLegend}>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#3498DB' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('target')}: {targetAmount.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#27AE60' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('achieved')}: {achievedAmount.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#E74C3C' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('pendingTarget')}: {pendingTargetAmount.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#F39C12' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('pendingInvoices')}: {pendingInvoiceAmount.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#9B59B6' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('totalSales')}: {totalSalesAmount.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.targetDetails}>
+          {/* Territory */}
+          {item.territory && (
+            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+              <Ionicons name="map" size={16} color="#666" />
+              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+                {translate('territory')}:
+              </Text>
+              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+                {item.territory}
+              </Text>
+            </View>
+          )}
+
+          {/* Customer */}
+          {item.customer_name && (
+            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+              <Ionicons name="person" size={16} color="#666" />
+              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+                {translate('customer')}:
+              </Text>
+              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+                {item.customer_name}
+              </Text>
+            </View>
+          )}
+
+          {/* Staff (for staff per customer view) */}
+          {item.staff_first_name && (
+            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+              <Ionicons name="people" size={16} color="#666" />
+              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+                {translate('staff')}:
+              </Text>
+              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+                {item.staff_first_name} {item.staff_last_name}
+              </Text>
+            </View>
+          )}
+
+          {/* Set By */}
+          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+            <Ionicons name="person-circle" size={16} color="#666" />
+            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+              {translate('setBy')}:
+            </Text>
+            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+              {item.set_by_first_name} {item.set_by_last_name}
+            </Text>
+          </View>
+
+          {/* Created Date */}
+          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+            <Ionicons name="calendar" size={16} color="#666" />
+            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+              {translate('createdOn')}:
+            </Text>
+            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+              {new Date(item.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   // Render targets list
   const renderTargetsList = () => {
-    if (salesTargets.length === 0) {
+    if (filteredTargets.length === 0) {
       return (
         <View style={commonStyles.emptyContainer}>
           <Ionicons name="flag-outline" size={64} color="#ccc" />
@@ -715,7 +963,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
     return (
       <FlatList
-        data={salesTargets}
+        data={filteredTargets}
         renderItem={renderTargetItem}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={false}
@@ -771,6 +1019,9 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
         {/* Tab Selector */}
         {renderTabSelector()}
+
+        {/* Target Sub-tabs */}
+        {renderTargetSubTabs()}
 
         {/* Content */}
         <ScrollView
@@ -875,6 +1126,45 @@ const styles = StyleSheet.create({
   },
 
   tabButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  // Sub Tab Container
+  subTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  subTabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 4,
+  },
+
+  subTabButtonActive: {
+    backgroundColor: '#6B7D3D',
+  },
+
+  subTabButtonText: {
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
+  },
+
+  subTabButtonTextActive: {
     color: '#fff',
     fontWeight: '600',
   },
@@ -1235,7 +1525,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Target Cards
+  // Target Cards with Enhanced Progress
   targetsList: {
     flexGrow: 1,
     paddingBottom: 20,
@@ -1297,6 +1587,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7D3D',
     fontWeight: '600',
+  },
+
+  // Target Progress Container
+  targetProgressContainer: {
+    marginBottom: 15,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+
+  progressBarSection: {
+    marginBottom: 12,
+  },
+
+  progressSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 6,
+  },
+
+  multiProgressBar: {
+    height: 10,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 5,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+
+  progressSegment: {
+    height: '100%',
+  },
+
+  achievedSegment: {
+    backgroundColor: '#27AE60',
+  },
+
+  pendingTargetSegment: {
+    backgroundColor: '#E74C3C',
+  },
+
+  totalSalesSegment: {
+    backgroundColor: '#9B59B6',
+  },
+
+  pendingInvoiceSegment: {
+    backgroundColor: '#F39C12',
+  },
+
+  progressLegend: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flex: 1,
+    minWidth: '45%',
+    marginBottom: 4,
+  },
+
+  rtlLegendItem: {
+    flexDirection: 'row-reverse',
+  },
+
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  legendText: {
+    fontSize: 9,
+    color: '#666',
+    fontWeight: '500',
+    flex: 1,
   },
 
   // Target Details

@@ -76,6 +76,42 @@ const SetSalesTargetScreen = ({ navigation }) => {
     }
   };
 
+  // Show paid feature alert
+  const showPaidFeatureAlert = () => {
+    const message = isRTL 
+      ? 'هذه الميزة متوفرة في التحديثات المدفوعة'
+      : 'This feature comes in paid updates';
+    
+    Alert.alert(
+      isRTL ? 'ميزة مدفوعة' : 'Paid Feature',
+      message,
+      [{ text: isRTL ? 'موافق' : 'OK' }]
+    );
+  };
+
+  // Handle target period selection
+  const handleTargetPeriodSelect = (period) => {
+    if (period === 'monthly') {
+      setTargetPeriod(period);
+    } else {
+      showPaidFeatureAlert();
+    }
+  };
+
+  // Handle target type selection
+  const handleTargetTypeSelect = (type) => {
+    if (type === 'revenue') {
+      setTargetType(type);
+    } else {
+      showPaidFeatureAlert();
+    }
+  };
+
+  // Handle territory selection (always show paid feature alert)
+  const handleTerritorySelect = () => {
+    showPaidFeatureAlert();
+  };
+
   // Handle date change
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -87,6 +123,13 @@ const SetSalesTargetScreen = ({ navigation }) => {
   // Format date for display
   const formatDate = (date) => {
     return date.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US');
+  };
+
+  // Format date for API (YYYY-MM)
+  const formatDateForAPI = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
   };
 
   // Validate form
@@ -123,7 +166,7 @@ const SetSalesTargetScreen = ({ navigation }) => {
     try {
       const payload = {
         target_period: targetPeriod,
-        target_date: targetDate.toISOString().split('T')[0],
+        target_date: formatDateForAPI(targetDate), // Fixed date format
         target_amount: parseFloat(targetAmount),
         target_type: targetType,
         set_by: currentUser.id,
@@ -197,17 +240,24 @@ const SetSalesTargetScreen = ({ navigation }) => {
             key={period}
             style={[
               styles.periodOption,
-              targetPeriod === period && styles.periodOptionActive
+              targetPeriod === period && styles.periodOptionActive,
+              period !== 'monthly' && styles.lockedOption
             ]}
-            onPress={() => setTargetPeriod(period)}
+            onPress={() => handleTargetPeriodSelect(period)}
           >
-            <Text style={[
-              styles.periodOptionText,
-              targetPeriod === period && styles.periodOptionTextActive,
-              isRTL && commonStyles.arabicText
-            ]}>
-              {translate(period)}
-            </Text>
+            <View style={styles.optionContent}>
+              <Text style={[
+                styles.periodOptionText,
+                targetPeriod === period && styles.periodOptionTextActive,
+                period !== 'monthly' && styles.lockedOptionText,
+                isRTL && commonStyles.arabicText
+              ]}>
+                {translate(period)}
+              </Text>
+              {period !== 'monthly' && (
+                <Ionicons name="lock-closed" size={14} color="#999" style={styles.lockIcon} />
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -226,22 +276,29 @@ const SetSalesTargetScreen = ({ navigation }) => {
             key={type}
             style={[
               styles.typeOption,
-              targetType === type && styles.typeOptionActive
+              targetType === type && styles.typeOptionActive,
+              type !== 'revenue' && styles.lockedOption
             ]}
-            onPress={() => setTargetType(type)}
+            onPress={() => handleTargetTypeSelect(type)}
           >
-            <Ionicons 
-              name={type === 'revenue' ? 'cash' : type === 'visits' ? 'location' : 'receipt'} 
-              size={16} 
-              color={targetType === type ? "#fff" : "#6B7D3D"} 
-            />
-            <Text style={[
-              styles.typeOptionText,
-              targetType === type && styles.typeOptionTextActive,
-              isRTL && commonStyles.arabicText
-            ]}>
-              {translate(type)}
-            </Text>
+            <View style={styles.typeOptionContent}>
+              <Ionicons 
+                name={type === 'revenue' ? 'cash' : type === 'visits' ? 'location' : 'receipt'} 
+                size={16} 
+                color={targetType === type ? "#fff" : type === 'revenue' ? "#6B7D3D" : "#999"} 
+              />
+              <Text style={[
+                styles.typeOptionText,
+                targetType === type && styles.typeOptionTextActive,
+                type !== 'revenue' && styles.lockedOptionText,
+                isRTL && commonStyles.arabicText
+              ]}>
+                {translate(type)}
+              </Text>
+              {type !== 'revenue' && (
+                <Ionicons name="lock-closed" size={12} color="#999" />
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -310,7 +367,7 @@ const SetSalesTargetScreen = ({ navigation }) => {
     </View>
   );
 
-  // Render territory selection (admin only)
+  // Render territory selection (admin only) - Now locked
   const renderTerritorySelection = () => {
     if (!isAdmin) return null;
 
@@ -320,24 +377,17 @@ const SetSalesTargetScreen = ({ navigation }) => {
           {translate('territory')} ({translate('optional')})
         </Text>
         <TouchableOpacity
-          style={[styles.selector, isRTL && styles.rtlSelector]}
-          onPress={() => navigation.navigate('TerritorySelectorScreen', {
-            selectedTerritoryId: selectedTerritory?.id,
-            onTerritorySelect: (territory) => {
-              setSelectedTerritory(territory);
-            }
-          })}
+          style={[styles.selector, styles.lockedSelector, isRTL && styles.rtlSelector]}
+          onPress={handleTerritorySelect}
         >
           <View style={styles.selectorInfo}>
-            <Ionicons name="map" size={20} color="#6B7D3D" />
-            <Text style={[styles.selectorText, isRTL && commonStyles.arabicText]}>
-              {selectedTerritory 
-                ? selectedTerritory.name
-                : translate('selectTerritory')
-              }
+            <Ionicons name="map" size={20} color="#999" />
+            <Text style={[styles.selectorText, styles.lockedSelectorText, isRTL && commonStyles.arabicText]}>
+              {translate('selectTerritory')}
             </Text>
+            <Ionicons name="lock-closed" size={16} color="#999" />
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
+          <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
       </View>
     );
@@ -485,6 +535,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#6B7D3D',
   },
 
+  lockedOption: {
+    borderColor: '#ddd',
+    backgroundColor: '#f5f5f5',
+  },
+
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
   periodOptionText: {
     fontSize: 14,
     color: '#6B7D3D',
@@ -496,6 +557,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  lockedOptionText: {
+    color: '#999',
+  },
+
+  lockIcon: {
+    marginLeft: 2,
+  },
+
   // Type Selection
   typeContainer: {
     flexDirection: 'row',
@@ -504,19 +573,23 @@ const styles = StyleSheet.create({
 
   typeOption: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#6B7D3D',
     backgroundColor: 'rgba(107, 125, 61, 0.1)',
-    gap: 6,
+    alignItems: 'center',
   },
 
   typeOptionActive: {
     backgroundColor: '#6B7D3D',
+  },
+
+  typeOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
 
   typeOptionText: {
@@ -568,6 +641,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
   },
 
+  lockedSelector: {
+    borderColor: '#ddd',
+    backgroundColor: '#f5f5f5',
+  },
+
   selectorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -579,6 +657,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     flex: 1,
+  },
+
+  lockedSelectorText: {
+    color: '#999',
   },
 });
 
