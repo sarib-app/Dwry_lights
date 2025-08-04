@@ -21,24 +21,40 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
 const AddInventoryScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    item_id:'',
+    item_id: '',
+    po_number: '',
     item_name: '',
     description: '',
     quantity: '',
     cost: '',
-    vat: '',
+    vat_percentage: '15',
+    vat_amount: '',
     vendor: '',
     subtotal: '',
     total: '',
     shipment_cost: '',
   });
   const [availableItems, setAvailableItems] = useState([]);
+  const [selectedPO, setSelectedPO] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingItems, setLoadingItems] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [authToken, setAuthToken] = useState('');
+  const [currentLanguage, setCurrentLanguage] = useState('en');
+  const [isRTL, setIsRTL] = useState(false);
 
   const translate = (key) => languageService.translate(key);
+
+  useEffect(() => {
+    initializeScreen();
+    fetchItems();
+  }, []);
+
+  const initializeScreen = async () => {
+    const language = await languageService.loadSavedLanguage();
+    setCurrentLanguage(language);
+    setIsRTL(language === 'ar');
+  };
 
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
@@ -59,7 +75,7 @@ const AddInventoryScreen = ({ navigation }) => {
     try {
       const token = await getAuthToken();
       if (!token) {
-        Alert.alert('Error', 'Authentication token not found');
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
         return;
       }
 
@@ -76,19 +92,29 @@ const AddInventoryScreen = ({ navigation }) => {
       if (result.status == 200) {
         setAvailableItems(result.data || []);
       } else {
-        Alert.alert('Error', result.message || 'Failed to fetch items');
+        Alert.alert(translate('error'), result.message || translate('failedToFetchItems'));
       }
     } catch (error) {
       console.error('Fetch items error:', error);
-      Alert.alert('Error', 'Network error while fetching items');
+      Alert.alert(translate('error'), translate('networkErrorFetchingItems'));
     } finally {
       setLoadingItems(false);
     }
   };
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
+  // Handle PO selection
+  const handlePOSelection = () => {
+    navigation.navigate('POSelectorScreen', {
+      selectedPOId: selectedPO?.id,
+      onPOSelect: (po) => {
+        setSelectedPO(po);
+        setFormData(prev => ({
+          ...prev,
+          po_number: po ? po.po_number : ''
+        }));
+      }
+    });
+  };
 
   // Handle input change
   const handleInputChange = (field, value) => {
@@ -96,16 +122,18 @@ const AddInventoryScreen = ({ navigation }) => {
       const newData = { ...prev, [field]: value };
       
       // Auto-calculate totals when relevant fields change
-      if (['quantity', 'cost', 'vat', 'shipment_cost'].includes(field)) {
+      if (['quantity', 'cost', 'vat_percentage', 'shipment_cost'].includes(field)) {
         const quantity = parseFloat(newData.quantity) || 0;
         const cost = parseFloat(newData.cost) || 0;
-        const vat = parseFloat(newData.vat) || 0;
+        const vatPercentage = parseFloat(newData.vat_percentage) || 0;
         const shipmentCost = parseFloat(newData.shipment_cost) || 0;
         
         const subtotal = quantity * cost;
-        const total = subtotal + vat + shipmentCost;
+        const vatAmount = (subtotal * vatPercentage) / 100;
+        const total = subtotal + vatAmount + shipmentCost;
         
         newData.subtotal = subtotal.toString();
+        newData.vat_amount = vatAmount.toString();
         newData.total = total.toString();
       }
       
@@ -117,7 +145,7 @@ const AddInventoryScreen = ({ navigation }) => {
   const handleItemSelect = (item) => {
     setFormData(prev => ({
       ...prev,
-      item_id:item.id,
+      item_id: item.id,
       item_name: item.name,
       description: item.description || '',
       cost: item.amount?.toString() || '',
@@ -128,15 +156,19 @@ const AddInventoryScreen = ({ navigation }) => {
   // Validate form
   const validateForm = () => {
     if (!formData.item_name.trim()) {
-      Alert.alert('Validation Error', 'Item name is required');
+      Alert.alert(translate('validationError'), translate('itemNameRequired'));
       return false;
     }
     if (!formData.quantity || isNaN(formData.quantity) || parseInt(formData.quantity) < 0) {
-      Alert.alert('Validation Error', 'Valid quantity is required');
+      Alert.alert(translate('validationError'), translate('validQuantityRequired'));
       return false;
     }
     if (!formData.cost || isNaN(formData.cost) || parseFloat(formData.cost) < 0) {
-      Alert.alert('Validation Error', 'Valid cost is required');
+      Alert.alert(translate('validationError'), translate('validCostRequired'));
+      return false;
+    }
+    if (!formData.po_number.trim()) {
+      Alert.alert(translate('validationError'), translate('poNumberRequired'));
       return false;
     }
     return true;
@@ -151,22 +183,26 @@ const AddInventoryScreen = ({ navigation }) => {
     try {
       const token = await getAuthToken();
       if (!token) {
-        Alert.alert('Error', 'Authentication token not found');
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
         return;
       }
 
       const payload = {
-        item_id:formData.item_id,
+        item_id: parseInt(formData.item_id) || null,
+        po_number: formData.po_number,
         item_name: formData.item_name,
         description: formData.description,
         quantity: parseInt(formData.quantity),
         cost: parseFloat(formData.cost),
-        vat: parseFloat(formData.vat) || 0,
+        vat_percentage: parseFloat(formData.vat_percentage) || 0,
+        vat_amount: parseFloat(formData.vat_amount) || 0,
         vendor: formData.vendor,
         subtotal: parseFloat(formData.subtotal) || 0,
-        total: parseFloat(formData.total) || 0,
         shipment_cost: parseFloat(formData.shipment_cost) || 0,
+        total: parseFloat(formData.total) || 0,
       };
+
+      console.log('Inventory Payload:', payload);
 
       const response = await fetch(`${API_BASE_URL}/make_inventory`, {
         method: 'POST',
@@ -182,24 +218,30 @@ const AddInventoryScreen = ({ navigation }) => {
 
       if (result.status == 200) {
         Alert.alert(
-          'Success',
-          'Inventory added successfully!',
+          translate('success'),
+          translate('inventoryAddedSuccessfully'),
           [
             {
-              text: 'OK',
+              text: translate('ok'),
               onPress: () => navigation.goBack(),
             },
           ]
         );
       } else {
-        Alert.alert('Error', result.message || 'Failed to add inventory');
+        Alert.alert(translate('error'), result.message || translate('failedToAddInventory'));
       }
     } catch (error) {
       console.error('Add inventory error:', error);
-      Alert.alert('Error', 'Network error while adding inventory');
+      Alert.alert(translate('error'), translate('networkErrorAddingInventory'));
     } finally {
       setLoading(false);
     }
+  };
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    const number = parseFloat(amount) || 0;
+    return isRTL ? `${number.toFixed(2)} ر.س` : `$${number.toFixed(2)}`;
   };
 
   // Render item in picker
@@ -209,9 +251,17 @@ const AddInventoryScreen = ({ navigation }) => {
       onPress={() => handleItemSelect(item)}
     >
       <View style={styles.pickerItemContent}>
-        <Text style={styles.pickerItemName}>{item.name}</Text>
-        {item.name_ar && <Text style={styles.pickerItemNameAr}>{item.name_ar}</Text>}
-        <Text style={styles.pickerItemPrice}>Price: ${item.amount || 0}</Text>
+        <Text style={[styles.pickerItemName, isRTL && styles.arabicText]}>
+          {item.name}
+        </Text>
+        {item.name_ar && (
+          <Text style={[styles.pickerItemNameAr, isRTL && styles.arabicText]}>
+            {item.name_ar}
+          </Text>
+        )}
+        <Text style={[styles.pickerItemPrice, isRTL && styles.arabicText]}>
+          {translate('price')}: {formatCurrency(item.amount || 0)}
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#666" />
     </TouchableOpacity>
@@ -222,14 +272,16 @@ const AddInventoryScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <LinearGradient colors={['#6B7D3D', '#4A5D23']} style={styles.headerGradient}>
-          <View style={styles.headerContent}>
+          <View style={[styles.headerContent, isRTL && styles.rtlHeaderContent]}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Add Inventory</Text>
+            <Text style={[styles.headerTitle, isRTL && styles.arabicText]}>
+              {translate('addInventory')}
+            </Text>
             <View style={styles.placeholder} />
           </View>
         </LinearGradient>
@@ -237,125 +289,225 @@ const AddInventoryScreen = ({ navigation }) => {
 
       {/* Form */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Item Selection */}
+        {/* PO Selection - New Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item Information</Text>
+          <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
+            {translate('purchaseOrderInformation')}
+          </Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Item *</Text>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('selectPurchaseOrder')} *
+            </Text>
+            <TouchableOpacity
+              style={[styles.selector, isRTL && styles.rtlSelector]}
+              onPress={handlePOSelection}
+            >
+              <View style={styles.selectorInfo}>
+                <Ionicons name="document-text" size={20} color="#6B7D3D" />
+                <Text style={[styles.selectorText, isRTL && styles.arabicText]}>
+                  {selectedPO 
+                    ? selectedPO.po_number
+                    : translate('selectPOPlaceholder')
+                  }
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
+            </TouchableOpacity>
+            {selectedPO && (
+              <View style={styles.poInfo}>
+                <Text style={[styles.poInfoText, isRTL && styles.arabicText]}>
+                  {translate('supplier')}: {selectedPO.supplier_name || translate('noSupplier')}
+                </Text>
+                {selectedPO.description && (
+                  <Text style={[styles.poInfoText, isRTL && styles.arabicText]}>
+                    {selectedPO.description}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Item Selection */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
+            {translate('itemInformation')}
+          </Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('selectItem')} *
+            </Text>
             <TouchableOpacity
               style={styles.itemSelector}
               onPress={() => setShowItemPicker(true)}
             >
-              <Text style={[styles.itemSelectorText, !formData.item_name && styles.placeholder]}>
-                {formData.item_name || 'Select an item from your inventory'}
+              <Text style={[
+                styles.itemSelectorText, 
+                !formData.item_name && styles.placeholder,
+                isRTL && styles.arabicText
+              ]}>
+                {formData.item_name || translate('selectItemFromInventory')}
               </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Item Name (Manual Entry)</Text>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('itemNameManualEntry')}
+            </Text>
             <TextInput
-              style={styles.input}
-              placeholder="Or enter item name manually"
+              style={[styles.input, isRTL && styles.arabicInput]}
+              placeholder={translate('orEnterItemNameManually')}
               value={formData.item_name}
               onChangeText={(value) => handleInputChange('item_name', value)}
+              textAlign={isRTL ? 'right' : 'left'}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('description')}
+            </Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Enter item description"
+              style={[styles.input, styles.textArea, isRTL && styles.arabicInput]}
+              placeholder={translate('enterItemDescription')}
               value={formData.description}
               onChangeText={(value) => handleInputChange('description', value)}
               multiline
               numberOfLines={3}
+              textAlign={isRTL ? 'right' : 'left'}
             />
           </View>
         </View>
 
         {/* Quantity & Cost */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantity & Pricing</Text>
+          <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
+            {translate('quantityAndPricing')}
+          </Text>
           
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Quantity *</Text>
+              <Text style={[styles.label, isRTL && styles.arabicText]}>
+                {translate('quantity')} *
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isRTL && styles.arabicInput]}
                 placeholder="0"
                 value={formData.quantity}
                 onChangeText={(value) => handleInputChange('quantity', value)}
                 keyboardType="numeric"
+                textAlign={isRTL ? 'right' : 'left'}
               />
             </View>
 
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Cost per Unit *</Text>
+              <Text style={[styles.label, isRTL && styles.arabicText]}>
+                {translate('costPerUnit')} *
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isRTL && styles.arabicInput]}
                 placeholder="0.00"
                 value={formData.cost}
                 onChangeText={(value) => handleInputChange('cost', value)}
                 keyboardType="decimal-pad"
+                textAlign={isRTL ? 'right' : 'left'}
               />
             </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Vendor</Text>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('vendor')}
+            </Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter vendor name"
+              style={[styles.input, isRTL && styles.arabicInput]}
+              placeholder={translate('enterVendorName')}
               value={formData.vendor}
               onChangeText={(value) => handleInputChange('vendor', value)}
+              textAlign={isRTL ? 'right' : 'left'}
             />
           </View>
         </View>
 
         {/* Financial Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Financial Details</Text>
+          <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
+            {translate('financialDetails')}
+          </Text>
           
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>VAT</Text>
+              <Text style={[styles.label, isRTL && styles.arabicText]}>
+                {translate('vatPercentage')}
+              </Text>
               <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                value={formData.vat}
-                onChangeText={(value) => handleInputChange('vat', value)}
+                style={[styles.input, isRTL && styles.arabicInput]}
+                placeholder="15"
+                value={formData.vat_percentage}
+                onChangeText={(value) => handleInputChange('vat_percentage', value)}
                 keyboardType="decimal-pad"
+                textAlign={isRTL ? 'right' : 'left'}
               />
             </View>
 
             <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Shipment Cost</Text>
+              <Text style={[styles.label, isRTL && styles.arabicText]}>
+                {translate('shipmentCost')}
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isRTL && styles.arabicInput]}
                 placeholder="0.00"
                 value={formData.shipment_cost}
                 onChangeText={(value) => handleInputChange('shipment_cost', value)}
                 keyboardType="decimal-pad"
+                textAlign={isRTL ? 'right' : 'left'}
               />
             </View>
           </View>
 
           {/* Calculated Fields */}
           <View style={styles.calculatedSection}>
-            <Text style={styles.calculatedTitle}>Calculated Totals</Text>
+            <Text style={[styles.calculatedTitle, isRTL && styles.arabicText]}>
+              {translate('calculatedTotals')}
+            </Text>
             
             <View style={styles.calculatedRow}>
-              <Text style={styles.calculatedLabel}>Subtotal:</Text>
-              <Text style={styles.calculatedValue}>${formData.subtotal || '0.00'}</Text>
+              <Text style={[styles.calculatedLabel, isRTL && styles.arabicText]}>
+                {translate('subtotal')}:
+              </Text>
+              <Text style={[styles.calculatedValue, isRTL && styles.arabicText]}>
+                {formatCurrency(formData.subtotal)}
+              </Text>
+            </View>
+
+            <View style={styles.calculatedRow}>
+              <Text style={[styles.calculatedLabel, isRTL && styles.arabicText]}>
+                {translate('vatAmount')}:
+              </Text>
+              <Text style={[styles.calculatedValue, isRTL && styles.arabicText]}>
+                {formatCurrency(formData.vat_amount)}
+              </Text>
+            </View>
+
+            <View style={styles.calculatedRow}>
+              <Text style={[styles.calculatedLabel, isRTL && styles.arabicText]}>
+                {translate('shipmentCost')}:
+              </Text>
+              <Text style={[styles.calculatedValue, isRTL && styles.arabicText]}>
+                {formatCurrency(formData.shipment_cost)}
+              </Text>
             </View>
             
             <View style={[styles.calculatedRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total Amount:</Text>
-              <Text style={styles.totalValue}>${formData.total || '0.00'}</Text>
+              <Text style={[styles.totalLabel, isRTL && styles.arabicText]}>
+                {translate('totalAmount')}:
+              </Text>
+              <Text style={[styles.totalValue, isRTL && styles.arabicText]}>
+                {formatCurrency(formData.total)}
+              </Text>
             </View>
           </View>
         </View>
@@ -371,7 +523,9 @@ const AddInventoryScreen = ({ navigation }) => {
           ) : (
             <>
               <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.submitButtonText}>Add to Inventory</Text>
+              <Text style={[styles.submitButtonText, isRTL && styles.arabicText]}>
+                {translate('addToInventory')}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -386,8 +540,10 @@ const AddInventoryScreen = ({ navigation }) => {
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Item</Text>
+          <View style={[styles.modalHeader, isRTL && styles.rtlModalHeader]}>
+            <Text style={[styles.modalTitle, isRTL && styles.arabicText]}>
+              {translate('selectItem')}
+            </Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowItemPicker(false)}
@@ -399,7 +555,9 @@ const AddInventoryScreen = ({ navigation }) => {
           {loadingItems ? (
             <View style={styles.modalLoading}>
               <ActivityIndicator size="large" color="#6B7D3D" />
-              <Text style={styles.modalLoadingText}>Loading items...</Text>
+              <Text style={[styles.modalLoadingText, isRTL && styles.arabicText]}>
+                {translate('loadingItems')}
+              </Text>
             </View>
           ) : (
             <>
@@ -414,8 +572,12 @@ const AddInventoryScreen = ({ navigation }) => {
               ) : (
                 <View style={styles.noItemsContainer}>
                   <Ionicons name="cube-outline" size={48} color="#ccc" />
-                  <Text style={styles.noItemsText}>No items available</Text>
-                  <Text style={styles.noItemsSubtext}>Add items first to create inventory</Text>
+                  <Text style={[styles.noItemsText, isRTL && styles.arabicText]}>
+                    {translate('noItemsAvailable')}
+                  </Text>
+                  <Text style={[styles.noItemsSubtext, isRTL && styles.arabicText]}>
+                    {translate('addItemsFirstToCreateInventory')}
+                  </Text>
                 </View>
               )}
             </>
@@ -443,6 +605,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  rtlHeaderContent: {
+    flexDirection: 'row-reverse',
   },
   backButton: {
     width: 40,
@@ -499,9 +664,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
+  arabicInput: {
+    textAlign: 'right',
+  },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+  },
+  selector: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
+  },
+  rtlSelector: {
+    flexDirection: 'row-reverse',
+  },
+  selectorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  selectorText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  poInfo: {
+    marginTop: 8,
+    paddingLeft: 30,
+  },
+  poInfoText: {
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontStyle: 'italic',
+    marginBottom: 2,
   },
   itemSelector: {
     borderWidth: 1,
@@ -585,6 +788,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    gap: 8,
   },
   submitButtonDisabled: {
     backgroundColor: '#ccc',
@@ -593,7 +797,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 8,
   },
   bottomSpace: {
     height: 30,
@@ -613,6 +816,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  rtlModalHeader: {
+    flexDirection: 'row-reverse',
   },
   modalTitle: {
     fontSize: 18,
@@ -691,6 +897,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#bbb',
     textAlign: 'center',
+  },
+  
+  // RTL Support
+  arabicText: {
+    textAlign: 'right',
+    fontFamily: 'Arabic',
   },
 });
 

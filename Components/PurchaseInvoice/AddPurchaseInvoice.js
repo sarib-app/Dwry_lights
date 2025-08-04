@@ -15,18 +15,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import languageService from '../Globals/Store/Lang';
-import getAuthToken from '../Globals/Store/LocalData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import EditCustomerScreen from '../CustomerManagment/EditCustomer';
-import AddCustomerScreen from '../CustomerManagment/AddCustomer';
+import languageService from '../Globals/Store/Lang';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
- const AddSalesInvoiceScreen = ({ navigation }) => {
+const AddPurchaseInvoiceScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    customer_id: '',
-    invoice_number: '',
+    inventory_id: '',
+    po_number: '',
+    amount: '',
+    supplier_id: '',
     invoice_date: new Date().toISOString().split('T')[0],
     due_date: '',
     items: [],
@@ -37,20 +36,24 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
     discount_amount: 0,
     total_amount: 0,
     payment_status: 'pending',
-    payment_method: 'Cash',
+    payment_method: 'Bank Transfer',
     notes: '',
     created_by: 1
   });
 
-  const [customers, setCustomers] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
-  const [selectedStaff, setSelectedStaff] = useState(null); // New state for selected staff
-  const [currentUser, setCurrentUser] = useState(null); // Current user state
-  const [isAdmin, setIsAdmin] = useState(false); // Admin check state
+  const [suppliers, setSuppliers] = useState([]);
+  const [inventories, setInventories] = useState([]);
+  const [selectedPO, setSelectedPO] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [selectedInventory, setSelectedInventory] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [showItemPicker, setShowItemPicker] = useState(false);
+  const [showSupplierPicker, setShowSupplierPicker] = useState(false);
+  const [showInventoryPicker, setShowInventoryPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('invoice');
   const [currentLanguage, setCurrentLanguage] = useState('en');
@@ -58,7 +61,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
   const translate = (key) => languageService.translate(key);
 
-  const paymentMethods = ['Cash', 'Card', 'Bank Transfer', 'Check'];
+  const paymentMethods = ['Bank Transfer', 'Cash', 'Card', 'Check'];
   const paymentStatuses = ['pending', 'paid', 'overdue'];
 
   useEffect(() => {
@@ -71,12 +74,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
     setCurrentLanguage(language);
     setIsRTL(language === 'ar');
     
-    // Load user data and set initial staff
     await loadUserData();
-    
-    // Generate invoice number
-    const invoiceNumber = `INV-${Date.now()}`;
-    setFormData(prev => ({ ...prev, invoice_number: invoiceNumber }));
   };
 
   // Load user data from AsyncStorage
@@ -86,49 +84,31 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       if (userData) {
         const user = JSON.parse(userData);
         setCurrentUser(user);
-        
-        // Check if user is admin (role_id not equal to 3)
-        const userIsAdmin = user.role_id !== 3;
-        setIsAdmin(userIsAdmin);
-        
-        // Set initial staff - if not admin, set current user as staff
-        if (!userIsAdmin) {
-          setSelectedStaff(user);
-          setFormData(prev => ({ ...prev, created_by: user.id }));
-        } else {
-          // For admin, set current user as default but allow selection
-          setSelectedStaff(user);
-          setFormData(prev => ({ ...prev, created_by: user.id }));
-        }
+        setFormData(prev => ({ ...prev, created_by: user.id }));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
 
-  const fetchInitialData = async () => {
-    await Promise.all([fetchCustomers(), fetchItems()]);
-    setLoadingData(false);
+  // Get auth token
+  const getAuthToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      return token ? `Bearer ${token}` : null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
   };
 
-  // Fetch customers
-  const fetchCustomers = async () => {
-    const token = await getAuthToken();
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_customers`, {
-        method: 'GET',
-        headers: { 'Authorization': token },
-      });
-      
-      const result = await response.json();
-      if (result.status == 200) {
-        setCustomers(result.data || []);
-      }
-    } catch (error) {
-      console.error('Fetch customers error:', error);
-    }
+  const fetchInitialData = async () => {
+    await Promise.all([
+      fetchItems(),
+      fetchSuppliers(),
+      fetchInventories()
+    ]);
+    setLoadingData(false);
   };
 
   // Fetch items
@@ -143,7 +123,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       });
       
       const result = await response.json();
-      if (result.status == 200) {
+      if (result.status === 200 || result.status === '200') {
         setAvailableItems(result.data || []);
       }
     } catch (error) {
@@ -151,13 +131,59 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
     }
   };
 
-  // Handle staff selection (using the same mechanism as report screen)
-  const handleStaffSelection = () => {
-    navigation.navigate('StaffSelectorScreen', {
-      selectedStaffId: selectedStaff?.id,
-      onStaffSelect: (staff) => {
-        setSelectedStaff(staff);
-        setFormData(prev => ({ ...prev, created_by: staff.id }));
+  // Fetch suppliers (assuming there's an API for this)
+  const fetchSuppliers = async () => {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    try {
+      // Assuming there's a suppliers API - adjust endpoint as needed
+      const response = await fetch(`${API_BASE_URL}/fetch_all_suppliers`, {
+        method: 'GET',
+        headers: { 'Authorization': token },
+      });
+      
+      const result = await response.json();
+      if (result.status === 200 || result.status === '200') {
+        setSuppliers(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch suppliers error:', error);
+      // Mock suppliers if API doesn't exist
+      setSuppliers([
+        { id: 1, name: 'ABC Supplies', contact_person: 'Ahmed Khan' },
+        { id: 2, name: 'XYZ Corp', contact_person: 'Sara Ahmed' },
+      ]);
+    }
+  };
+
+  // Fetch inventories
+  const fetchInventories = async () => {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/fetch_all_inventory`, {
+        method: 'GET',
+        headers: { 'Authorization': token },
+      });
+      
+      const result = await response.json();
+      if (result.status === 200 || result.status === '200') {
+        setInventories(result.data?.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch inventories error:', error);
+    }
+  };
+
+  // Handle PO selection
+  const handlePOSelection = () => {
+    navigation.navigate('POSelectorScreen', {
+      selectedPOId: selectedPO?.id,
+      onPOSelect: (po) => {
+        setSelectedPO(po);
+        setFormData(prev => ({ ...prev, po_number: po ? po.po_number : '' }));
       }
     });
   };
@@ -178,7 +204,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
   // Calculate totals
   const calculateTotals = (data = formData) => {
-    const subtotal = data.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
     const taxAmount = (subtotal * parseFloat(data.tax_percentage || 0)) / 100;
     const discountAmount = data.discount_amount || ((subtotal * parseFloat(data.discount_percentage || 0)) / 100);
     const totalAmount = subtotal + taxAmount - discountAmount;
@@ -188,23 +214,32 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       subtotal: subtotal.toFixed(2),
       tax_amount: taxAmount.toFixed(2),
       discount_amount: discountAmount.toFixed(2),
-      total_amount: totalAmount.toFixed(2)
+      total_amount: totalAmount.toFixed(2),
+      amount: totalAmount.toFixed(2)
     }));
   };
 
-  // Handle customer selection
-  const handleCustomerSelect = (customer) => {
-    setFormData(prev => ({ ...prev, customer_id: customer.id }));
-    setShowCustomerPicker(false);
+  // Handle supplier selection
+  const handleSupplierSelect = (supplier) => {
+    setSelectedSupplier(supplier);
+    setFormData(prev => ({ ...prev, supplier_id: supplier.id }));
+    setShowSupplierPicker(false);
+  };
+
+  // Handle inventory selection
+  const handleInventorySelect = (inventory) => {
+    setSelectedInventory(inventory);
+    setFormData(prev => ({ ...prev, inventory_id: inventory.id }));
+    setShowInventoryPicker(false);
   };
 
   // Handle item selection
   const handleItemSelect = (item) => {
     const newItem = {
       item_id: item.id,
-      description: item.name,
-      qty: 1,
-      price: parseFloat(item.amount || 0)
+      quantity: 1,
+      unit_price: parseFloat(item.amount || 0),
+      total_price: parseFloat(item.amount || 0)
     };
     
     setFormData(prev => {
@@ -219,7 +254,17 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
   const updateItem = (index, field, value) => {
     setFormData(prev => {
       const newItems = [...prev.items];
-      newItems[index] = { ...newItems[index], [field]: field === 'qty' || field === 'price' ? parseFloat(value) || 0 : value };
+      if (field === 'quantity' || field === 'unit_price') {
+        newItems[index] = { 
+          ...newItems[index], 
+          [field]: parseFloat(value) || 0,
+          total_price: field === 'quantity' 
+            ? (parseFloat(value) || 0) * newItems[index].unit_price
+            : newItems[index].quantity * (parseFloat(value) || 0)
+        };
+      } else {
+        newItems[index] = { ...newItems[index], [field]: value };
+      }
       const newData = { ...prev, items: newItems };
       calculateTotals(newData);
       return newData;
@@ -250,12 +295,12 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
   // Validate form
   const validateForm = () => {
-    if (!formData.customer_id) {
-      Alert.alert(translate('validationError'), translate('customerRequired'));
+    if (!formData.supplier_id) {
+      Alert.alert(translate('validationError'), translate('supplierRequired'));
       return false;
     }
-    if (!formData.invoice_number.trim()) {
-      Alert.alert(translate('validationError'), translate('invoiceNumberRequired'));
+    if (!formData.po_number.trim()) {
+      Alert.alert(translate('validationError'), translate('poNumberRequired'));
       return false;
     }
     if (!formData.due_date) {
@@ -264,10 +309,6 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
     }
     if (formData.items.length === 0) {
       Alert.alert(translate('validationError'), translate('itemsRequired'));
-      return false;
-    }
-    if (!selectedStaff) {
-      Alert.alert(translate('validationError'), translate('staffSelectionRequired'));
       return false;
     }
     return true;
@@ -287,24 +328,24 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       }
 
       const payload = {
-        customer_id: parseInt(formData.customer_id),
-        invoice_number: formData.invoice_number,
+        inventory_id: parseInt(formData.inventory_id) || null,
+        po_number: formData.po_number,
+        amount: parseFloat(formData.amount),
+        supplier_id: parseInt(formData.supplier_id),
         invoice_date: formData.invoice_date,
         due_date: formData.due_date,
         items: formData.items,
-        subtotal: parseFloat(formData.subtotal),
         tax_percentage: parseFloat(formData.tax_percentage),
-        tax_amount: parseFloat(formData.tax_amount),
         discount_percentage: parseFloat(formData.discount_percentage),
-        discount_amount: parseFloat(formData.discount_amount),
-        total_amount: parseFloat(formData.total_amount),
         payment_status: formData.payment_status,
         payment_method: formData.payment_method,
         notes: formData.notes,
-        created_by: formData.created_by // This now contains the selected staff ID
+        created_by: formData.created_by
       };
 
-      const response = await fetch(`${API_BASE_URL}/add_sale_invoice`, {
+      console.log('Purchase Invoice Payload:', payload);
+
+      const response = await fetch(`${API_BASE_URL}/add_purchase_invoice`, {
         method: 'POST',
         headers: {
           'Authorization': token,
@@ -314,32 +355,29 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       });
 
       const result = await response.json();
-      console.log('Add invoice response:', result);
+      console.log('Add purchase invoice response:', result);
 
-      if (result.status == 200) {
+      if (result.status === 200 || result.status === '200') {
         Alert.alert(
           translate('success'),
-          translate('invoiceCreatedSuccessfully'),
+          translate('purchaseInvoiceCreatedSuccessfully'),
           [{ text: translate('ok'), onPress: () => navigation.goBack() }]
         );
       } else {
-        Alert.alert(translate('error'), result.message || translate('failedToCreateInvoice'));
+        Alert.alert(translate('error'), result.message || translate('failedToCreatePurchaseInvoice'));
       }
     } catch (error) {
-      console.error('Add invoice error:', error);
-      Alert.alert(translate('error'), translate('networkErrorCreatingInvoice'));
+      console.error('Add purchase invoice error:', error);
+      Alert.alert(translate('error'), translate('networkErrorCreatingPurchaseInvoice'));
     } finally {
       setLoading(false);
     }
   };
 
-  // Get selected customer
-  const selectedCustomer = customers.find(c => c.id == formData.customer_id);
-
   // Format currency
   const formatCurrency = (amount) => {
     const number = parseFloat(amount) || 0;
-    return isRTL ? `${number.toFixed(2)} ر.س` : `$${number.toFixed(2)}`;
+    return isRTL ? `${number.toFixed(2)} ر.س` : `${number.toFixed(2)}`;
   };
 
   if (loadingData) {
@@ -366,7 +404,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
               <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, isRTL && styles.arabicText]}>
-              {translate('addSalesInvoice')}
+              {translate('addPurchaseInvoice')}
             </Text>
             <View style={styles.placeholder} />
           </View>
@@ -375,36 +413,73 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
       {/* Form */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Staff Selection - New Section */}
+        {/* Purchase Order & Supplier Information */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
-            {translate('salesByStaffMember')}
+            {translate('purchaseOrderInformation')}
           </Text>
           
           <View style={styles.inputGroup}>
             <Text style={[styles.label, isRTL && styles.arabicText]}>
-              {translate('selectStaff')} *
+              {translate('selectPurchaseOrder')} *
             </Text>
             <TouchableOpacity
               style={[styles.selector, isRTL && styles.rtlSelector]}
-              onPress={handleStaffSelection}
+              onPress={handlePOSelection}
             >
               <View style={styles.selectorInfo}>
-                <Ionicons name="people" size={20} color="#6B7D3D" />
+                <Ionicons name="document-text" size={20} color="#6B7D3D" />
                 <Text style={[styles.selectorText, isRTL && styles.arabicText]}>
-                  {selectedStaff 
-                    ? `${selectedStaff.first_name} ${selectedStaff.last_name}`
-                    : translate('selectStaff')
+                  {selectedPO 
+                    ? selectedPO.po_number
+                    : translate('selectPOPlaceholder')
                   }
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-            {selectedStaff && (
-              <Text style={[styles.staffInfo, isRTL && styles.arabicText]}>
-                {translate('salesWillBeTrackedFor')}: {selectedStaff.first_name} {selectedStaff.last_name}
-              </Text>
-            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('selectSupplier')} *
+            </Text>
+            <TouchableOpacity
+              style={[styles.selector, isRTL && styles.rtlSelector]}
+              onPress={() => setShowSupplierPicker(true)}
+            >
+              <View style={styles.selectorInfo}>
+                <Ionicons name="business" size={20} color="#6B7D3D" />
+                <Text style={[styles.selectorText, isRTL && styles.arabicText]}>
+                  {selectedSupplier 
+                    ? selectedSupplier.name
+                    : translate('selectSupplierPlaceholder')
+                  }
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isRTL && styles.arabicText]}>
+              {translate('selectInventory')} ({translate('optional')})
+            </Text>
+            <TouchableOpacity
+              style={[styles.selector, isRTL && styles.rtlSelector]}
+              onPress={() => setShowInventoryPicker(true)}
+            >
+              <View style={styles.selectorInfo}>
+                <Ionicons name="cube" size={20} color="#6B7D3D" />
+                <Text style={[styles.selectorText, isRTL && styles.arabicText]}>
+                  {selectedInventory 
+                    ? selectedInventory.item_name
+                    : translate('selectInventoryPlaceholder')
+                  }
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -414,19 +489,6 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
             {translate('invoiceInformation')}
           </Text>
           
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isRTL && styles.arabicText]}>
-              {translate('invoiceNumber')} *
-            </Text>
-            <TextInput
-              style={[styles.input, isRTL && styles.arabicInput]}
-              placeholder={translate('enterInvoiceNumber')}
-              value={formData.invoice_number}
-              onChangeText={(value) => handleInputChange('invoice_number', value)}
-              textAlign={isRTL ? 'right' : 'left'}
-            />
-          </View>
-
           <View style={styles.row}>
             <View style={[styles.inputGroup, styles.halfWidth]}>
               <Text style={[styles.label, isRTL && styles.arabicText]}>
@@ -466,31 +528,6 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
           </View>
         </View>
 
-        {/* Customer Selection */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, isRTL && styles.arabicText]}>
-            {translate('customerInformation')}
-          </Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isRTL && styles.arabicText]}>
-              {translate('selectCustomer')} *
-            </Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => setShowCustomerPicker(true)}
-            >
-              <Text style={[styles.selectorText, !selectedCustomer && styles.placeholder, isRTL && styles.arabicText]}>
-                {selectedCustomer 
-                  ? (isRTL ? selectedCustomer.name_ar || selectedCustomer.name : selectedCustomer.name)
-                  : translate('selectCustomerPlaceholder')
-                }
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Items Section */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, isRTL && styles.rtlSectionHeader]}>
@@ -512,7 +549,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
             <View key={index} style={styles.itemCard}>
               <View style={[styles.itemHeader, isRTL && styles.rtlItemHeader]}>
                 <Text style={[styles.itemDescription, isRTL && styles.arabicText]}>
-                  {item.description}
+                  {translate('item')} {item.item_id}
                 </Text>
                 <TouchableOpacity
                   style={styles.removeItemButton}
@@ -529,8 +566,8 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
                   </Text>
                   <TextInput
                     style={[styles.itemInput, isRTL && styles.arabicInput]}
-                    value={item.qty.toString()}
-                    onChangeText={(value) => updateItem(index, 'qty', value)}
+                    value={item.quantity.toString()}
+                    onChangeText={(value) => updateItem(index, 'quantity', value)}
                     keyboardType="numeric"
                     textAlign={isRTL ? 'right' : 'left'}
                   />
@@ -542,8 +579,8 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
                   </Text>
                   <TextInput
                     style={[styles.itemInput, isRTL && styles.arabicInput]}
-                    value={item.price.toString()}
-                    onChangeText={(value) => updateItem(index, 'price', value)}
+                    value={item.unit_price.toString()}
+                    onChangeText={(value) => updateItem(index, 'unit_price', value)}
                     keyboardType="decimal-pad"
                     textAlign={isRTL ? 'right' : 'left'}
                   />
@@ -551,10 +588,10 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
                 
                 <View style={[styles.itemInputGroup, styles.flex2]}>
                   <Text style={[styles.itemLabel, isRTL && styles.arabicText]}>
-                    {translate('total')}
+                    {translate('totalPrice')}
                   </Text>
                   <Text style={[styles.itemTotal, isRTL && styles.arabicText]}>
-                    {formatCurrency(item.qty * item.price)}
+                    {formatCurrency(item.total_price)}
                   </Text>
                 </View>
               </View>
@@ -742,7 +779,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
             <>
               <Ionicons name="checkmark" size={20} color="#fff" />
               <Text style={[styles.submitButtonText, isRTL && styles.arabicText]}>
-                {translate('createInvoice')}
+                {translate('createPurchaseInvoice')}
               </Text>
             </>
           )}
@@ -751,40 +788,93 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
         <View style={styles.bottomSpace} />
       </ScrollView>
 
-      {/* Customer Picker Modal */}
+      {/* Supplier Picker Modal */}
       <Modal
-        visible={showCustomerPicker}
+        visible={showSupplierPicker}
         animationType="slide"
         presentationStyle="pageSheet"
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={[styles.modalHeader, isRTL && styles.rtlModalHeader]}>
             <Text style={[styles.modalTitle, isRTL && styles.arabicText]}>
-              {translate('selectCustomer')}
+              {translate('selectSupplier')}
             </Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setShowCustomerPicker(false)}
+              onPress={() => setShowSupplierPicker(false)}
             >
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
           
           <FlatList
-            data={customers}
+            data={suppliers}
             keyExtractor={(item) => item.id.toString()}
             style={styles.pickerList}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.pickerItem}
-                onPress={() => handleCustomerSelect(item)}
+                onPress={() => handleSupplierSelect(item)}
               >
                 <View style={styles.pickerItemContent}>
                   <Text style={[styles.pickerItemName, isRTL && styles.arabicText]}>
-                    {isRTL ? item.name_ar || item.name : item.name}
+                    {item.name}
+                  </Text>
+                  {item.contact_person && (
+                    <Text style={[styles.pickerItemDetails, isRTL && styles.arabicText]}>
+                      {translate('contact')}: {item.contact_person}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <View style={styles.noDataContainer}>
+                <Ionicons name="business-outline" size={48} color="#ccc" />
+                <Text style={[styles.noDataText, isRTL && styles.arabicText]}>
+                  {translate('noSuppliersAvailable')}
+                </Text>
+              </View>
+            }
+          />
+        </SafeAreaView>
+      </Modal>
+
+      {/* Inventory Picker Modal */}
+      <Modal
+        visible={showInventoryPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={[styles.modalHeader, isRTL && styles.rtlModalHeader]}>
+            <Text style={[styles.modalTitle, isRTL && styles.arabicText]}>
+              {translate('selectInventory')}
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowInventoryPicker(false)}
+            >
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <FlatList
+            data={inventories}
+            keyExtractor={(item) => item.id.toString()}
+            style={styles.pickerList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => handleInventorySelect(item)}
+              >
+                <View style={styles.pickerItemContent}>
+                  <Text style={[styles.pickerItemName, isRTL && styles.arabicText]}>
+                    {item.item_name}
                   </Text>
                   <Text style={[styles.pickerItemDetails, isRTL && styles.arabicText]}>
-                    {item.territory} • {item.customer_type}
+                    {translate('quantity')}: {item.quantity} • {translate('cost')}: {formatCurrency(item.cost)}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#666" />
@@ -792,9 +882,9 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
             )}
             ListEmptyComponent={
               <View style={styles.noDataContainer}>
-                <Ionicons name="people-outline" size={48} color="#ccc" />
+                <Ionicons name="cube-outline" size={48} color="#ccc" />
                 <Text style={[styles.noDataText, isRTL && styles.arabicText]}>
-                  {translate('noCustomersAvailable')}
+                  {translate('noInventoryAvailable')}
                 </Text>
               </View>
             }
@@ -977,21 +1067,6 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f9f9f9',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#333',
-  },
   selector: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -1017,14 +1092,20 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
-  staffInfo: {
-    fontSize: 12,
-    color: '#6B7D3D',
-    fontStyle: 'italic',
-    marginTop: 5,
+  dateInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
   },
-  placeholder: {
-    color: '#999',
+  dateText: {
+    fontSize: 16,
+    color: '#333',
   },
   addItemButton: {
     flexDirection: 'row',
@@ -1311,4 +1392,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddSalesInvoiceScreen;
+export default AddPurchaseInvoiceScreen;

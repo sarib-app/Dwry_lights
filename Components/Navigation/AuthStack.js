@@ -53,6 +53,9 @@ import StaffManagementScreen from '../StaffManagmentSrc/StaffManagmentScree';
 import AddEditStaffScreen from '../StaffManagmentSrc/AddEditStaff';
 import UserManagementScreen from '../UserManagmentScreen.js/UserManagmentScreen';
 import AddEditUserScreen from '../UserManagmentScreen.js/AddEditUser';
+import POSelectorScreen from '../PurchaseOrder/PoSelectorScreen';
+import PurchaseInvoiceListScreen from '../PurchaseInvoice/PurchaseInvoiceList';
+import AddPurchaseInvoiceScreen from '../PurchaseInvoice/AddPurchaseInvoice';
 
 const Stack = createStackNavigator();
 
@@ -129,6 +132,13 @@ const AuthStack = () => {
 
 <Stack.Screen name="UserManagementScreen" component={UserManagementScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddEditUserScreen" component={AddEditUserScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="POSelectorScreen" component={POSelectorScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="PurchaseInvoiceListScreen" component={PurchaseInvoiceListScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddPurchaseInvoice" component={AddPurchaseInvoiceScreen} options={{ headerShown: false }} />
+
+
 
 
 

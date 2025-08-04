@@ -50,6 +50,8 @@ checkUserRole();
     { id: 7, title: 'Sales Invoice', icon: 'receipt', color: '#27AE60', category: 'financial' },
     { id: 8, title: 'Purchase Orders', icon: 'document-text', color: '#3498DB', category: 'financial' },
     { id: 9, title: 'Expenses', icon: 'card', color: '#E67E22', category: 'financial' },
+    { id: 16, title: 'Purchase Invoice', icon: 'receipt', color: '#9B59B6', category: 'financial' },
+
     { id: 10, title: 'Payments', icon: 'wallet', color: '#16A085', category: 'financial' },
     
     // Operations
@@ -100,6 +102,10 @@ else if(actionTitle === 'Staff'){
 
 else if(actionTitle === 'User'){
   navigation.navigate('UserManagementScreen');
+}
+
+else if(actionTitle === 'Purchase Invoice'){
+  navigation.navigate('PurchaseInvoiceListScreen');
 }
 else {
     Alert.alert(
