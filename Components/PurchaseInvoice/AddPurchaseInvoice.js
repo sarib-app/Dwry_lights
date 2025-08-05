@@ -43,7 +43,6 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
 
   const [availableItems, setAvailableItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [inventories, setInventories] = useState([]);
   const [selectedPO, setSelectedPO] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [selectedInventory, setSelectedInventory] = useState(null);
@@ -53,7 +52,6 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
   const [loadingData, setLoadingData] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
-  const [showInventoryPicker, setShowInventoryPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('invoice');
   const [currentLanguage, setCurrentLanguage] = useState('en');
@@ -105,8 +103,7 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
   const fetchInitialData = async () => {
     await Promise.all([
       fetchItems(),
-      fetchSuppliers(),
-      fetchInventories()
+      fetchSuppliers()
     ]);
     setLoadingData(false);
   };
@@ -157,26 +154,6 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
     }
   };
 
-  // Fetch inventories
-  const fetchInventories = async () => {
-    const token = await getAuthToken();
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_inventory`, {
-        method: 'GET',
-        headers: { 'Authorization': token },
-      });
-      
-      const result = await response.json();
-      if (result.status === 200 || result.status === '200') {
-        setInventories(result.data?.data || []);
-      }
-    } catch (error) {
-      console.error('Fetch inventories error:', error);
-    }
-  };
-
   // Handle PO selection
   const handlePOSelection = () => {
     navigation.navigate('POSelectorScreen', {
@@ -184,6 +161,20 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
       onPOSelect: (po) => {
         setSelectedPO(po);
         setFormData(prev => ({ ...prev, po_number: po ? po.po_number : '' }));
+      }
+    });
+  };
+
+  // Handle inventory selection
+  const handleInventorySelection = () => {
+    navigation.navigate('InventorySelectorScreen', {
+      selectedInventoryId: selectedInventory?.id,
+      onInventorySelect: (inventory) => {
+        setSelectedInventory(inventory);
+        setFormData(prev => ({ 
+          ...prev, 
+          inventory_id: inventory ? inventory.id : '' 
+        }));
       }
     });
   };
@@ -224,13 +215,6 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
     setSelectedSupplier(supplier);
     setFormData(prev => ({ ...prev, supplier_id: supplier.id }));
     setShowSupplierPicker(false);
-  };
-
-  // Handle inventory selection
-  const handleInventorySelect = (inventory) => {
-    setSelectedInventory(inventory);
-    setFormData(prev => ({ ...prev, inventory_id: inventory.id }));
-    setShowInventoryPicker(false);
   };
 
   // Handle item selection
@@ -467,18 +451,18 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
             </Text>
             <TouchableOpacity
               style={[styles.selector, isRTL && styles.rtlSelector]}
-              onPress={() => setShowInventoryPicker(true)}
+              onPress={handleInventorySelection}
             >
               <View style={styles.selectorInfo}>
                 <Ionicons name="cube" size={20} color="#6B7D3D" />
                 <Text style={[styles.selectorText, isRTL && styles.arabicText]}>
                   {selectedInventory 
-                    ? selectedInventory.item_name
+                    ? selectedInventory.description
                     : translate('selectInventoryPlaceholder')
                   }
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
           </View>
         </View>
@@ -834,57 +818,6 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
                 <Ionicons name="business-outline" size={48} color="#ccc" />
                 <Text style={[styles.noDataText, isRTL && styles.arabicText]}>
                   {translate('noSuppliersAvailable')}
-                </Text>
-              </View>
-            }
-          />
-        </SafeAreaView>
-      </Modal>
-
-      {/* Inventory Picker Modal */}
-      <Modal
-        visible={showInventoryPicker}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={[styles.modalHeader, isRTL && styles.rtlModalHeader]}>
-            <Text style={[styles.modalTitle, isRTL && styles.arabicText]}>
-              {translate('selectInventory')}
-            </Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowInventoryPicker(false)}
-            >
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <FlatList
-            data={inventories}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.pickerList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.pickerItem}
-                onPress={() => handleInventorySelect(item)}
-              >
-                <View style={styles.pickerItemContent}>
-                  <Text style={[styles.pickerItemName, isRTL && styles.arabicText]}>
-                    {item.item_name}
-                  </Text>
-                  <Text style={[styles.pickerItemDetails, isRTL && styles.arabicText]}>
-                    {translate('quantity')}: {item.quantity} • {translate('cost')}: {formatCurrency(item.cost)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.noDataContainer}>
-                <Ionicons name="cube-outline" size={48} color="#ccc" />
-                <Text style={[styles.noDataText, isRTL && styles.arabicText]}>
-                  {translate('noInventoryAvailable')}
                 </Text>
               </View>
             }

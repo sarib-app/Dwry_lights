@@ -111,12 +111,12 @@ const SettingsScreen = ({ navigation }) => {
   const performLogout = async () => {
     try {
       // Clear user data from AsyncStorage
-      await AsyncStorage.multiRemove(['userData', 'authToken']);
+      await AsyncStorage.multiRemove(['userData', 'userToken']);
       
       // Navigate to login screen and reset navigation stack
       navigation.reset({
         index: 0,
-        routes: [{ name: 'LoginScreen' }],
+        routes: [{ name: 'Login' }],
       });
     } catch (error) {
       console.error('Error during logout:', error);

@@ -244,7 +244,7 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
       const response = await fetch(`${API_BASE_URL}/update_sale_invoice_by_id/${invoice.id}`, {
         method: 'POST',
         headers: {
-          'Authorization': token,
+          // 'Authorization': token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
