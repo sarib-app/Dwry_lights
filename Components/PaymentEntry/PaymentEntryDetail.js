@@ -10,7 +10,10 @@ import {
   Share,
   ActivityIndicator,
   Modal,
-  RefreshControl
+  RefreshControl,
+  Image,
+  Linking,
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,10 +21,10 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
-// import { commonStyles, getStatusColor } from '../shared/CommonStyles';
 import commonStyles from '../Globals/CommonStyles';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
+const { width: screenWidth } = Dimensions.get('window');
 
 const PaymentEntryDetailsScreen = ({ navigation, route }) => {
   const { entry: initialEntry } = route.params;
@@ -30,6 +33,7 @@ const PaymentEntryDetailsScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionsModal, setShowActionsModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
 
@@ -117,6 +121,28 @@ const PaymentEntryDetailsScreen = ({ navigation, route }) => {
       case 'purchase_invoice': return 'document-text';
       case 'expense': return 'card';
       default: return 'cash';
+    }
+  };
+
+  // Handle image press
+  const handleImagePress = () => {
+    setShowImageModal(true);
+  };
+
+  // Handle video press
+  const handleVideoPress = async () => {
+    if (entry.video_url) {
+      try {
+        const supported = await Linking.canOpenURL(entry.video_url);
+        if (supported) {
+          await Linking.openURL(entry.video_url);
+        } else {
+          Alert.alert(translate('error'), translate('cannotOpenVideo'));
+        }
+      } catch (error) {
+        console.error('Error opening video:', error);
+        Alert.alert(translate('error'), translate('cannotOpenVideo'));
+      }
     }
   };
 
@@ -573,6 +599,67 @@ ${translate('generatedBy')} ${translate('appName')}
           </View>
         </View>
 
+        {/* Media Attachments */}
+        {(entry.image_url || entry.video_url) && (
+          <View style={commonStyles.section}>
+            <View style={[styles.sectionHeader, isRTL && commonStyles.rtlSectionHeader]}>
+              <Ionicons name="images" size={24} color="#6B7D3D" />
+              <Text style={[commonStyles.sectionTitle, isRTL && commonStyles.arabicText]}>
+                {translate('attachments')}
+              </Text>
+            </View>
+            
+            <View style={styles.mediaContainer}>
+              {/* Image Display */}
+              {entry.image_url && (
+                <View style={styles.mediaItem}>
+                  <Text style={[styles.mediaLabel, isRTL && commonStyles.arabicText]}>
+                    {translate('image')}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.imageContainer}
+                    onPress={handleImagePress}
+                    activeOpacity={0.8}
+                  >
+                    <Image 
+                      source={{ uri: entry.image_url }} 
+                      style={styles.attachmentImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.imageOverlay}>
+                      <Ionicons name="expand" size={24} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Video Display */}
+              {entry.video_url && (
+                <View style={styles.mediaItem}>
+                  <Text style={[styles.mediaLabel, isRTL && commonStyles.arabicText]}>
+                    {translate('video')}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.videoContainer}
+                    onPress={handleVideoPress}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.videoPreview}>
+                      <Ionicons name="play-circle" size={50} color="#6B7D3D" />
+                      <Text style={[styles.videoText, isRTL && commonStyles.arabicText]}>
+                        {translate('tapToPlayVideo')}
+                      </Text>
+                    </View>
+                    <View style={styles.videoOverlay}>
+                      <Ionicons name="videocam" size={20} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Notes Section */}
         {entry.notes && (
           <View style={commonStyles.section}>
@@ -618,6 +705,37 @@ ${translate('generatedBy')} ${translate('appName')}
 
         <View style={commonStyles.bottomSpace} />
       </ScrollView>
+
+      {/* Image Modal */}
+      <Modal
+        visible={showImageModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.imageModalContainer}>
+          <View style={styles.imageModalHeader}>
+            <Text style={[styles.imageModalTitle, isRTL && commonStyles.arabicText]}>
+              {translate('paymentImage')}
+            </Text>
+            <TouchableOpacity
+              style={styles.imageModalCloseButton}
+              onPress={() => setShowImageModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.imageModalContent}>
+            {entry.image_url && (
+              <Image 
+                source={{ uri: entry.image_url }} 
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Actions Modal */}
       <Modal
@@ -813,6 +931,124 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+  },
+
+  // Media attachment styles
+  mediaContainer: {
+    marginTop: 10,
+    gap: 20,
+  },
+
+  mediaItem: {
+    marginBottom: 15,
+  },
+
+  mediaLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+
+  imageContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f8f9fa',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  attachmentImage: {
+    width: '100%',
+    height: 200,
+  },
+
+  imageOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
+  },
+
+  videoContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f8f9fa',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  videoPreview: {
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+
+  videoText: {
+    fontSize: 14,
+    color: '#6B7D3D',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  videoOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(107, 125, 61, 0.8)',
+    borderRadius: 15,
+    padding: 6,
+  },
+
+  // Image modal styles
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  },
+
+  imageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+
+  imageModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  imageModalCloseButton: {
+    padding: 8,
+  },
+
+  imageModalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+
+  fullScreenImage: {
+    width: screenWidth - 40,
+    height: '80%',
   },
   
   notesContainer: {

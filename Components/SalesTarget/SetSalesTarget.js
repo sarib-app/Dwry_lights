@@ -100,11 +100,13 @@ const SetSalesTargetScreen = ({ navigation }) => {
 
   // Handle target type selection
   const handleTargetTypeSelect = (type) => {
-    if (type === 'revenue') {
       setTargetType(type);
-    } else {
-      showPaidFeatureAlert();
-    }
+
+    // if (type === 'revenue') {
+    //   setTargetType(type);
+    // } else {
+    //   showPaidFeatureAlert();
+    // }
   };
 
   // Handle territory selection (always show paid feature alert)
@@ -271,13 +273,13 @@ const SetSalesTargetScreen = ({ navigation }) => {
         {translate('targetType')} *
       </Text>
       <View style={styles.typeContainer}>
-        {['revenue', 'visits', 'orders'].map((type) => (
+        {['revenue', 'visits', 'sales'].map((type) => (
           <TouchableOpacity
             key={type}
             style={[
               styles.typeOption,
               targetType === type && styles.typeOptionActive,
-              type !== 'revenue' && styles.lockedOption
+              type == 'revenues' && styles.lockedOption
             ]}
             onPress={() => handleTargetTypeSelect(type)}
           >

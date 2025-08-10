@@ -1297,6 +1297,10 @@ customerVisits: 'Customer Visits',
 'loadingData': 'Loading data...',
 'tryAdjustingSearch': 'Try adjusting your search terms',
 
+  "salesTarget": "Sales Target",
+  "revenueTarget": "Revenue Target", 
+  "visitsTarget": "Visits Target",
+
   },
   ar: {
     // App General
@@ -2590,6 +2594,10 @@ customerVisits: 'زيارات العملاء',
 'noItemsAvailable': 'لا توجد عناصر متاحة',
 'loadingData': 'جاري تحميل البيانات...',
 'tryAdjustingSearch': 'جرب تعديل كلمات البحث',
+
+  "salesTarget": "هدف المبيعات",
+  "revenueTarget": "هدف الإيرادات",
+  "visitsTarget": "هدف الزيارات", 
 
   }
 };

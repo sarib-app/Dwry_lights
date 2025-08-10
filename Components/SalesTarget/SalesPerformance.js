@@ -749,202 +749,247 @@ const SalesPerformanceScreen = ({ navigation }) => {
   };
 
   // Render enhanced sales target item with progress bars
-  const renderTargetItem = ({ item }) => {
-    const targetAmount = parseFloat(item.target_amount) || 0;
-    const achievedAmount = parseFloat(item.achieved_amount) || 0;
-    const pendingTargetAmount = parseFloat(item.pending_target_amount) || 0; // Updated field name
-    const pendingInvoiceAmount = parseFloat(item.pending_invoice_amount) || 0; // New field
-    const totalSalesAmount = achievedAmount + pendingInvoiceAmount; // Calculated field
-    
-    const achievementPercentage = targetAmount > 0 ? (achievedAmount / targetAmount) * 100 : 0;
-    const totalSalesPercentage = targetAmount > 0 ? (totalSalesAmount / targetAmount) * 100 : 0;
+// Render enhanced sales target item with progress bars for sales, revenue, and visits
+// Render enhanced sales target item with progress bars for sales, revenue, and visits
+const renderTargetItem = ({ item }) => {
+  // Sales data
+  const targetSalesAmount = parseFloat(item.target_sales_amount) || 0;
+  const achievedSalesAmount = parseFloat(item.achieved_sales_amount) || 0;
+  const pendingSalesAmount = Math.max(0, targetSalesAmount - achievedSalesAmount);
+  const salesPercentage = targetSalesAmount > 0 ? (achievedSalesAmount / targetSalesAmount) * 100 : 0;
 
-    return (
-      <View style={[styles.targetCard, isRTL && styles.rtlTargetCard]}>
-        <View style={[styles.targetHeader, isRTL && styles.rtlTargetHeader]}>
-          <View style={styles.targetInfo}>
-            <Text style={[styles.targetTitle, isRTL && commonStyles.arabicText]}>
-              {translate(item.target_type)} {translate('target')}
-            </Text>
-            <Text style={[styles.targetPeriod, isRTL && commonStyles.arabicText]}>
-              {translate(item.target_period)} • {new Date(item.target_date + '-01').toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
-            </Text>
+  // Revenue data
+  const targetRevenueAmount = parseFloat(item.target_revenue_amount) || 0;
+  const achievedRevenueAmount = parseFloat(item.achieved_revenue_amount) || 0;
+  const pendingRevenueAmount = Math.max(0, targetRevenueAmount - achievedRevenueAmount);
+  const revenuePercentage = targetRevenueAmount > 0 ? (achievedRevenueAmount / targetRevenueAmount) * 100 : 0;
+
+  // Visits data
+  const targetVisitCount = parseInt(item.target_visit_count) || 0;
+  const achievedVisitCount = parseInt(item.achieved_visit_count) || 0;
+  const pendingVisitCount = Math.max(0, targetVisitCount - achievedVisitCount);
+  const visitPercentage = targetVisitCount > 0 ? (achievedVisitCount / targetVisitCount) * 100 : 0;
+
+  // Pending invoice amount (existing field)
+  const pendingInvoiceAmount = parseFloat(item.pending_invoice_amount) || 0;
+
+  // Always show all target types, even if they are 0/null
+
+  return (
+    <View style={[styles.targetCard, isRTL && styles.rtlTargetCard]}>
+      <View style={[styles.targetHeader, isRTL && styles.rtlTargetHeader]}>
+        <View style={styles.targetInfo}>
+          <Text style={[styles.targetTitle, isRTL && commonStyles.arabicText]}>
+            {translate('salesTargets')}
+          </Text>
+          <Text style={[styles.targetPeriod, isRTL && commonStyles.arabicText]}>
+            {translate(item.target_period)} • {new Date(item.target_date + '-01').toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+          </Text>
+        </View>
+        
+        <View style={[styles.targetBadge, { backgroundColor: `rgba(107, 125, 61, 0.1)` }]}>
+          <Ionicons name="flag" size={16} color="#6B7D3D" />
+          <Text style={[styles.targetAmount, isRTL && commonStyles.arabicText]}>
+            {translate('multipleTargets')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Progress Chart */}
+      <View style={styles.targetProgressContainer}>
+        <Text style={[styles.progressTitle, isRTL && commonStyles.arabicText]}>
+          {translate('targetProgress')}
+        </Text>
+
+        {/* Sales Target Progress - Always show */}
+        <View style={styles.progressBarSection}>
+          <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+            {translate('salesTarget')} - {salesPercentage.toFixed(1)}%
+          </Text>
+          <View style={styles.multiProgressBar}>
+            <View 
+              style={[
+                styles.progressSegment,
+                styles.achievedSegment,
+                { width: `${Math.min(salesPercentage, 100)}%` }
+              ]}
+            />
           </View>
-          
-          <View style={[styles.targetBadge, { backgroundColor: `rgba(107, 125, 61, 0.1)` }]}>
-            <Ionicons name="flag" size={16} color="#6B7D3D" />
-            <Text style={[styles.targetAmount, isRTL && commonStyles.arabicText]}>
-              {targetAmount.toLocaleString()}
-            </Text>
+          <View style={styles.progressLegendRow}>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#27AE60' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('target')}: {targetSalesAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#3498DB' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('achieved')}: {achievedSalesAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#E74C3C' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('pending')}: {pendingSalesAmount.toLocaleString()}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Progress Chart */}
-        <View style={styles.targetProgressContainer}>
-          <Text style={[styles.progressTitle, isRTL && commonStyles.arabicText]}>
-            {translate('progress')} - {achievementPercentage.toFixed(1)}%
+        {/* Revenue Target Progress - Always show */}
+        <View style={styles.progressBarSection}>
+          <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+            {translate('revenueTarget')} - {revenuePercentage.toFixed(1)}%
           </Text>
-
-          {/* Primary Progress Bar - Target vs Achieved vs Pending Target */}
-          <View style={styles.progressBarSection}>
-            <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
-              {translate('targetProgress')}
-            </Text>
-            <View style={styles.multiProgressBar}>
-              <View 
-                style={[
-                  styles.progressSegment,
-                  styles.achievedSegment,
-                  { width: `${Math.min((achievedAmount / targetAmount) * 100, 100)}%` }
-                ]}
-              />
-              <View 
-                style={[
-                  styles.progressSegment,
-                  styles.pendingTargetSegment,
-                  { width: `${Math.min((pendingTargetAmount / targetAmount) * 100, 100)}%` }
-                ]}
-              />
+          <View style={styles.multiProgressBar}>
+            <View 
+              style={[
+                styles.progressSegment,
+                styles.revenueAchievedSegment,
+                { width: `${Math.min(revenuePercentage, 100)}%` }
+              ]}
+            />
+          </View>
+          <View style={styles.progressLegendRow}>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#27AE60' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('target')}: {targetRevenueAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#9B59B6' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('achieved')}: {achievedRevenueAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#E74C3C' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('pending')}: {pendingRevenueAmount.toLocaleString()}
+              </Text>
             </View>
           </View>
+        </View>
 
-          {/* Secondary Progress Bar - Total Sales Amount */}
-          <View style={styles.progressBarSection}>
-            <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
-              {translate('totalSales')} - {totalSalesPercentage.toFixed(1)}%
-            </Text>
-            <View style={styles.multiProgressBar}>
-              <View 
-                style={[
-                  styles.progressSegment,
-                  styles.totalSalesSegment,
-                  { width: `${Math.min(totalSalesPercentage, 100)}%` }
-                ]}
-              />
+        {/* Visits Target Progress - Always show */}
+        <View style={styles.progressBarSection}>
+          <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
+            {translate('visitsTarget')} - {visitPercentage.toFixed(1)}%
+          </Text>
+          <View style={styles.multiProgressBar}>
+            <View 
+              style={[
+                styles.progressSegment,
+                styles.visitAchievedSegment,
+                { width: `${Math.min(visitPercentage, 100)}%` }
+              ]}
+            />
+          </View>
+          <View style={styles.progressLegendRow}>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#27AE60' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('target')}: {targetVisitCount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#F39C12' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('achieved')}: {achievedVisitCount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
+              <View style={[styles.legendDot, { backgroundColor: '#E74C3C' }]} />
+              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
+                {translate('pending')}: {pendingVisitCount.toLocaleString()}
+              </Text>
             </View>
           </View>
+        </View>
 
-          {/* Pending Invoice Progress Bar */}
+        {/* Pending Invoice Amount (if applicable) */}
+        {pendingInvoiceAmount > 0 && (
           <View style={styles.progressBarSection}>
             <Text style={[styles.progressSectionTitle, isRTL && commonStyles.arabicText]}>
               {translate('pendingInvoices')}
             </Text>
-            <View style={styles.multiProgressBar}>
-              <View 
-                style={[
-                  styles.progressSegment,
-                  styles.pendingInvoiceSegment,
-                  { width: `${Math.min((pendingInvoiceAmount / targetAmount) * 100, 100)}%` }
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* Progress Legend */}
-          <View style={styles.progressLegend}>
-            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
-              <View style={[styles.legendDot, { backgroundColor: '#3498DB' }]} />
-              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
-                {translate('target')}: {targetAmount.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
-              <View style={[styles.legendDot, { backgroundColor: '#27AE60' }]} />
-              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
-                {translate('achieved')}: {achievedAmount.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
-              <View style={[styles.legendDot, { backgroundColor: '#E74C3C' }]} />
-              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
-                {translate('pendingTarget')}: {pendingTargetAmount.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
-              <View style={[styles.legendDot, { backgroundColor: '#F39C12' }]} />
-              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
-                {translate('pendingInvoices')}: {pendingInvoiceAmount.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={[styles.legendItem, isRTL && styles.rtlLegendItem]}>
-              <View style={[styles.legendDot, { backgroundColor: '#9B59B6' }]} />
-              <Text style={[styles.legendText, isRTL && commonStyles.arabicText]}>
-                {translate('totalSales')}: {totalSalesAmount.toLocaleString()}
+            <View style={styles.pendingInvoiceCard}>
+              <Ionicons name="document-text" size={20} color="#F39C12" />
+              <Text style={[styles.pendingInvoiceAmount, isRTL && commonStyles.arabicText]}>
+                {pendingInvoiceAmount.toLocaleString()}
               </Text>
             </View>
           </View>
+        )}
+      </View>
+
+      <View style={styles.targetDetails}>
+        {/* Territory */}
+        {item.territory && (
+          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+            <Ionicons name="map" size={16} color="#666" />
+            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+              {translate('territory')}:
+            </Text>
+            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+              {item.territory}
+            </Text>
+          </View>
+        )}
+
+        {/* Customer */}
+        {item.customer_name && (
+          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+            <Ionicons name="person" size={16} color="#666" />
+            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+              {translate('customer')}:
+            </Text>
+            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+              {item.customer_name}
+            </Text>
+          </View>
+        )}
+
+        {/* Staff (for staff per customer view) */}
+        {item.staff_first_name && (
+          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+            <Ionicons name="people" size={16} color="#666" />
+            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+              {translate('staff')}:
+            </Text>
+            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+              {item.staff_first_name} {item.staff_last_name}
+            </Text>
+          </View>
+        )}
+
+        {/* Set By */}
+        <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+          <Ionicons name="person-circle" size={16} color="#666" />
+          <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+            {translate('setBy')}:
+          </Text>
+          <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+            {item.set_by_first_name} {item.set_by_last_name}
+          </Text>
         </View>
 
-        <View style={styles.targetDetails}>
-          {/* Territory */}
-          {item.territory && (
-            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-              <Ionicons name="map" size={16} color="#666" />
-              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-                {translate('territory')}:
-              </Text>
-              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-                {item.territory}
-              </Text>
-            </View>
-          )}
-
-          {/* Customer */}
-          {item.customer_name && (
-            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-              <Ionicons name="person" size={16} color="#666" />
-              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-                {translate('customer')}:
-              </Text>
-              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-                {item.customer_name}
-              </Text>
-            </View>
-          )}
-
-          {/* Staff (for staff per customer view) */}
-          {item.staff_first_name && (
-            <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-              <Ionicons name="people" size={16} color="#666" />
-              <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-                {translate('staff')}:
-              </Text>
-              <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-                {item.staff_first_name} {item.staff_last_name}
-              </Text>
-            </View>
-          )}
-
-          {/* Set By */}
-          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-            <Ionicons name="person-circle" size={16} color="#666" />
-            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-              {translate('setBy')}:
-            </Text>
-            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-              {item.set_by_first_name} {item.set_by_last_name}
-            </Text>
-          </View>
-
-          {/* Created Date */}
-          <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
-            <Ionicons name="calendar" size={16} color="#666" />
-            <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
-              {translate('createdOn')}:
-            </Text>
-            <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
-              {new Date(item.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
-            </Text>
-          </View>
+        {/* Created Date */}
+        <View style={[styles.targetDetailRow, isRTL && styles.rtlDetailRow]}>
+          <Ionicons name="calendar" size={16} color="#666" />
+          <Text style={[styles.targetDetailLabel, isRTL && commonStyles.arabicText]}>
+            {translate('createdOn')}:
+          </Text>
+          <Text style={[styles.targetDetailValue, isRTL && commonStyles.arabicText]}>
+            {new Date(item.created_at).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+          </Text>
         </View>
       </View>
-    );
-  };
-
+    </View>
+  );
+};
   // Render targets list
   const renderTargetsList = () => {
     if (filteredTargets.length === 0) {
@@ -965,7 +1010,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
       <FlatList
         data={filteredTargets}
         renderItem={renderTargetItem}
-        keyExtractor={(item) => item.id.toString()}
+        // keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.targetsList}
       />
@@ -1706,6 +1751,72 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
+
+
+
+
+  // Pending Invoice Card
+  // Add these additional styles to your existing StyleSheet.create({...}) object
+
+// New progress segment colors for different target types
+revenueAchievedSegment: {
+  backgroundColor: '#9B59B6', // Purple for revenue
+},
+
+visitAchievedSegment: {
+  backgroundColor: '#F39C12', // Orange for visits
+},
+
+// Progress legend row for better spacing
+progressLegendRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  flexWrap: 'wrap',
+  gap: 4,
+  marginTop: 6,
+  marginBottom: 8,
+},
+
+// Updated legend item for better fit
+legendItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 3,
+  flex: 1,
+  minWidth: '30%', // Changed from 45% to fit 3 items per row
+  marginBottom: 2,
+},
+
+// Pending invoice card styling
+pendingInvoiceCard: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(243, 156, 18, 0.1)',
+  borderRadius: 8,
+  padding: 12,
+  gap: 8,
+  marginTop: 6,
+},
+
+pendingInvoiceAmount: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#F39C12',
+},
+
+// Enhanced progress section spacing
+progressBarSection: {
+  marginBottom: 16, // Increased spacing between sections
+},
+
+// Enhanced legend text for better readability
+legendText: {
+  fontSize: 10, // Slightly larger for better readability
+  color: '#666',
+  fontWeight: '500',
+  flex: 1,
+},
 });
 
 export default SalesPerformanceScreen;

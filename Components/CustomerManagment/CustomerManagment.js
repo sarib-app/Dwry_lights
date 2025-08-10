@@ -175,66 +175,67 @@ const CustomerManagementScreen = ({ navigation }) => {
   };
 
   // Render customer card
-  const renderCustomerCard = (customer) => (
-    <View key={customer.id} style={styles.customerCard}>
-        {/* <Text>
-            {customer.name}
-        </Text> */}
-      {/* <View style={styles.customerHeader}>
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{customer.name}</Text>
-          {customer.name_ar && <Text style={styles.customerNameAr}>{customer.name_ar}</Text>}
-        </View>
-        <View style={styles.customerActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => navigation.navigate('EditCustomer', { customer })}
-          >
-            <Ionicons name="pencil" size={16} color="#6B7D3D" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteCustomer(customer.id)}
-          >
-            <Ionicons name="trash" size={16} color="#E74C3C" />
-          </TouchableOpacity>
-        </View>
+const renderCustomerCard = (customer) => (
+  <View key={customer.id} style={styles.customerCard}>
+    <Text>
+      {customer.name}
+    </Text>
+    <View style={styles.customerHeader}>
+      <View style={styles.customerInfo}>
+        <Text style={styles.customerName}>{customer.name}</Text>
+        {customer.name_ar && <Text style={styles.customerNameAr}>{customer.name_ar}</Text>}
       </View>
-
-      <View style={styles.customerDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="location" size={16} color="#666" />
-          <Text style={styles.detailText} numberOfLines={1}>
-            {customer.territory || 'No territory'}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
-          <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
-        </View>
-      </View>
-
-      {customer.address_contact && (
-        <Text style={styles.customerAddress} numberOfLines={2}>
-          {customer.address_contact}
-        </Text>
-      )}
-
-      {(customer.lat && customer.long) && (
-        <TouchableOpacity style={styles.locationButton}>
-          <Ionicons name="map" size={16} color="#3498DB" />
-          <Text style={styles.locationText}>
-            {customer.lat.toFixed(4)}, {customer.long.toFixed(4)}
-          </Text>
+      <View style={styles.customerActions}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.editButton]}
+          onPress={() => navigation.navigate('EditCustomer', { customer })}
+        >
+          <Ionicons name="pencil" size={16} color="#6B7D3D" />
         </TouchableOpacity>
-      )}
-
-      {customer.added_by && (
-        <Text style={styles.addedBy}>Added by user ID: {customer.added_by}</Text>
-      )} */}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => deleteCustomer(customer.id)}
+        >
+          <Ionicons name="trash" size={16} color="#E74C3C" />
+        </TouchableOpacity>
+      </View>
     </View>
-  );
 
+    <View style={styles.customerDetails}>
+      <View style={styles.detailRow}>
+        <Ionicons name="location" size={16} color="#666" />
+        <Text style={styles.detailText} numberOfLines={1}>
+          {customer.territory || 'No territory'}
+        </Text>
+      </View>
+      <View style={styles.detailRow}>
+        <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
+        <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
+      </View>
+    </View>
+
+    {customer.address_contact && (
+      <Text style={styles.customerAddress} numberOfLines={2}>
+        {customer.address_contact}
+      </Text>
+    )}
+
+    {(customer.lat && customer.long) && (
+      <TouchableOpacity style={styles.locationButton}>
+        <Ionicons name="map" size={16} color="#3498DB" />
+        <Text style={styles.locationText}>
+          {parseFloat(customer.lat).toFixed(4)}, {parseFloat(customer.long).toFixed(4)}
+        </Text>
+      </TouchableOpacity>
+    )}
+
+    {customer.added_by && (
+      <Text style={styles.addedBy}>
+        Added by: {customer.added_by.first_name} {customer.added_by.last_name} ({customer.added_by.role})
+      </Text>
+    )}
+  </View>
+);
   if (loading && customers.length === 0) {
     return (
       <View style={styles.loadingContainer}>
