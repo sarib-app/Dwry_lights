@@ -204,7 +204,7 @@ const AddPurchaseInvoiceScreen = ({ navigation }) => {
       ...prev,
       subtotal: subtotal.toFixed(2),
       tax_amount: taxAmount.toFixed(2),
-      discount_amount: discountAmount.toFixed(2),
+      discount_amount: discountAmount,
       total_amount: totalAmount.toFixed(2),
       amount: totalAmount.toFixed(2)
     }));

@@ -187,7 +187,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       ...prev,
       subtotal: subtotal.toFixed(2),
       tax_amount: taxAmount.toFixed(2),
-      discount_amount: discountAmount.toFixed(2),
+      discount_amount: discountAmount,
       total_amount: totalAmount.toFixed(2)
     }));
   };
