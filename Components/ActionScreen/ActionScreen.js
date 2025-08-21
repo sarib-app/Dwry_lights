@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,68 +13,80 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const { width } = Dimensions.get('window');
 
 const ActionsScreen = ({navigation}) => {
   const translate = (key) => languageService.translate(key);
-
-  // Use anywhere in your app
-  const [roleId, setRoleId] = React.useState(null);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Example usage
-    const checkUserRole = async () => {
-      const role = await getUserRole();
-      setRoleId(role);
+    const initializeData = async () => {
+      try {
+        // Get user role
+        const role = await getUserRole();
+        setRoleId(role);
+
+        // Fetch user permissions
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    checkUserRole();
-  }, [])
+    initializeData();
+  }, []);
 
-  // All action items
+  // All action items with their module names
   const allActionItems = [
     // Core Business
-    { id: 1, title: 'Items', icon: 'cube', color: '#6B7D3D', category: 'core' },
-    { id: 2, title: 'Inventory', icon: 'library', color: '#8B5A2B', category: 'core' },
-    { id: 3, title: 'Banks', icon: 'grid', color: '#4A90E2', category: 'core' },
+    { id: 1, title: 'Items', module: 'items', icon: 'cube', color: '#6B7D3D', category: 'core' },
+    { id: 2, title: 'Inventory', module: 'inventory', icon: 'library', color: '#8B5A2B', category: 'core' },
+    { id: 3, title: 'Banks', module: 'banks', icon: 'grid', color: '#4A90E2', category: 'core' },
+    { id: 33, title: 'Pemrissions', module: 'permissions', icon: 'grid', color: '#9B98E2', category: 'core' },
+
     
     // People Management
-    { id: 4, title: 'Customers', icon: 'people', color: '#E74C3C', category: 'people' },
-    { id: 5, title: 'Staff', icon: 'person-circle', color: '#9B59B6', category: 'people' },
-    { id: 15, title: 'User', icon: 'person', color: '#9B59B6', category: 'people' },
-    { id: 6, title: 'Suppliers', icon: 'business', color: '#F39C12', category: 'people' },
+    { id: 4, title: 'Customers', module: 'customers', icon: 'people', color: '#E74C3C', category: 'people' },
+    { id: 5, title: 'Staff', module: 'staff', icon: 'person-circle', color: '#9B59B6', category: 'people' },
+    { id: 15, title: 'User', module: 'user', icon: 'person', color: '#9B59B6', category: 'people' },
+    { id: 6, title: 'Suppliers', module: 'suppliers', icon: 'business', color: '#F39C12', category: 'people' },
     
     // Financial
-    { id: 7, title: 'Sales Invoice', icon: 'receipt', color: '#27AE60', category: 'financial' },
-    { id: 8, title: 'Purchase Orders', icon: 'document-text', color: '#3498DB', category: 'financial' },
-    { id: 9, title: 'Expenses', icon: 'card', color: '#E67E22', category: 'financial' },
-    { id: 16, title: 'Purchase Invoice', icon: 'receipt', color: '#9B59B6', category: 'financial' },
-    { id: 10, title: 'Payments', icon: 'wallet', color: '#16A085', category: 'financial' },
+    { id: 7, title: 'Sales Invoice', module: 'sales_invoice', icon: 'receipt', color: '#27AE60', category: 'financial' },
+    { id: 8, title: 'Purchase Orders', module: 'purchase_orders', icon: 'document-text', color: '#3498DB', category: 'financial' },
+    { id: 9, title: 'Expenses', module: 'expenses', icon: 'card', color: '#E67E22', category: 'financial' },
+    { id: 16, title: 'Purchase Invoice', module: 'purchase_invoice', icon: 'receipt', color: '#9B59B6', category: 'financial' },
+    { id: 10, title: 'Payments', module: 'payments', icon: 'wallet', color: '#16A085', category: 'financial' },
     
     // Operations
-    { id: 11, title: 'Reports', icon: 'analytics', color: '#34495E', category: 'operations' },
-    { id: 12, title: 'Territories', icon: 'map', color: '#8E44AD', category: 'operations' },
-    { id: 13, title: 'Quotations', icon: 'document-attach', color: '#2ECC71', category: 'operations' },
-    { id: 14, title: 'Returns', icon: 'return-up-back', color: '#C0392B', category: 'operations' },
+    { id: 11, title: 'Reports', module: 'reports', icon: 'analytics', color: '#34495E', category: 'operations' },
+    { id: 12, title: 'Territories', module: 'territories', icon: 'map', color: '#8E44AD', category: 'operations' },
+    { id: 13, title: 'Quotations', module: 'quotations', icon: 'document-attach', color: '#2ECC71', category: 'operations' },
+    { id: 14, title: 'Returns', module: 'returns', icon: 'return-up-back', color: '#C0392B', category: 'operations' },
   ];
 
-  // Staff-only action items (role ID 3)
-  const staffActionItems = [
-    { id: 1, title: 'Items', icon: 'cube', color: '#6B7D3D', category: 'core' },
-    { id: 7, title: 'Sales Invoice', icon: 'receipt', color: '#27AE60', category: 'financial' },
-    { id: 16, title: 'Purchase Invoice', icon: 'receipt', color: '#9B59B6', category: 'financial' },
-  ];
-
-  // Get action items based on role
-  const getActionItemsForRole = () => {
-    if (roleId === 3) {
-      return staffActionItems;
+  // Filter action items based on permissions
+  const getVisibleActionItems = () => {
+    // If not role 3 (admin), show all items
+    if (roleId !== 3) {
+      return allActionItems;
     }
-    return allActionItems;
+    // For role 3 (staff), filter by permissions
+    return allActionItems.filter(item => {
+      // Check if user has module access permission (e.g., "sales_invoice.management")
+      return simplePermissions.hasModuleAccess(item.module);
+    });
   };
 
-  const actionItems = getActionItemsForRole();
+  const actionItems = getVisibleActionItems();
 
   const allCategories = [
     { key: 'core', title: 'Core Business', icon: 'business' },
@@ -83,7 +95,7 @@ const ActionsScreen = ({navigation}) => {
     { key: 'operations', title: 'Operations', icon: 'settings' },
   ];
 
-  // Get categories that have items for current role
+  // Get categories that have visible items
   const getVisibleCategories = () => {
     const visibleCategories = [];
     
@@ -100,7 +112,6 @@ const ActionsScreen = ({navigation}) => {
   const categories = getVisibleCategories();
 
   const handleActionPress = (actionTitle) => {
-    // In handleActionPress function, add:
     if (actionTitle === 'Inventory') {
       navigation.navigate('InventoryManagement');
     } else if (actionTitle === 'Items') {
@@ -139,7 +150,7 @@ const ActionsScreen = ({navigation}) => {
       key={item.id}
       style={[
         styles.actionCard,
-        roleId === 3 && styles.staffActionCard // Special styling for staff
+        roleId === 3 && styles.staffActionCard
       ]}
       onPress={() => handleActionPress(item.title)}
       activeOpacity={0.7}
@@ -163,7 +174,6 @@ const ActionsScreen = ({navigation}) => {
   const renderCategory = (category) => {
     const categoryItems = actionItems.filter(item => item.category === category.key);
     
-    // Don't render category if no items
     if (categoryItems.length === 0) {
       return null;
     }
@@ -177,14 +187,14 @@ const ActionsScreen = ({navigation}) => {
           </Text>
           {roleId === 3 && (
             <View style={styles.staffBadge}>
-              <Text style={styles.staffBadgeText}>Staff Access</Text>
+              <Text style={styles.staffBadgeText}>Permission Based</Text>
             </View>
           )}
         </View>
         
         <View style={[
           styles.actionsGrid,
-          roleId === 3 && styles.staffActionsGrid // Center items for staff
+          roleId === 3 && styles.staffActionsGrid
         ]}>
           {categoryItems.map(renderActionCard)}
         </View>
@@ -192,20 +202,12 @@ const ActionsScreen = ({navigation}) => {
     );
   };
 
-  // Get header subtitle based on role
-  const getHeaderSubtitle = () => {
-    if (roleId === 3) {
-      return 'Staff Dashboard - Limited Access';
-    }
-    return 'Manage your business operations';
-  };
-
-  // Show loading state if role is not determined yet
-  if (roleId === null) {
+  // Show loading state
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Loading permissions...</Text>
         </View>
       </SafeAreaView>
     );
@@ -221,13 +223,14 @@ const ActionsScreen = ({navigation}) => {
         >
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>{translate('actions')}</Text>
-            <Text style={styles.headerSubtitle}>{getHeaderSubtitle()}</Text>
-            {roleId === 3 && (
-              <View style={styles.roleIndicator}>
-                <Ionicons name="person-circle" size={16} color="#fff" />
-                <Text style={styles.roleText}>Staff Member</Text>
-              </View>
-            )}
+            <Text style={styles.headerSubtitle}>
+              {roleId !== 3 
+                ? 'Admin - Full Access to All Modules'
+                : actionItems.length > 0 
+                  ? `${actionItems.length} modules available` 
+                  : 'No permissions assigned'
+              }
+            </Text>
           </View>
         </LinearGradient>
       </View>
@@ -290,22 +293,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
   },
-  roleIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  roleText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
   content: {
     flex: 1,
   },
@@ -360,7 +347,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   staffActionCard: {
-    width: (width - 65) / 2, // Slightly smaller for staff
+    width: (width - 65) / 2,
     marginHorizontal: 5,
   },
   cardGradient: {

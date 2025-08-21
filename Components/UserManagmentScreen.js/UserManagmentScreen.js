@@ -345,39 +345,54 @@ const UserManagementScreen = ({ navigation }) => {
 
       {/* Action Buttons */}
       <View style={[styles.actionButtons, isRTL && styles.rtlActionButtons]}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => navigation.navigate('AddEditUserScreen', { 
-            user: item, 
-            isEdit: true,
-            onUserUpdated: fetchUserList 
-          })}
-        >
-          <Ionicons name="create" size={16} color="#3498DB" />
-          <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
-            {translate('edit')}
-          </Text>
-        </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.actionButton, styles.permissionButton]}
+    onPress={() => navigation.navigate('PermissionManagerScreen', { 
+      userId: item.id,
+      userName: `${item.first_name} ${item.last_name}`,
+      userEmail: item.email
+    })}
+  >
+    <Ionicons name="key" size={16} color="#9B59B6" />
+    <Text style={[styles.actionButtonText, { color: '#9B59B6' }, isRTL && commonStyles.arabicText]}>
+      {translate('permissions')}
+    </Text>
+  </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.actionButton, 
-            styles.deleteButton,
-            item.id === currentUser?.id && styles.disabledButton
-          ]}
-          onPress={() => confirmDelete(item)}
-          disabled={item.id === currentUser?.id}
-        >
-          <Ionicons name="trash" size={16} color={item.id === currentUser?.id ? "#ccc" : "#E74C3C"} />
-          <Text style={[
-            styles.actionButtonText, 
-            { color: item.id === currentUser?.id ? "#ccc" : "#E74C3C" }, 
-            isRTL && commonStyles.arabicText
-          ]}>
-            {translate('delete')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+  <TouchableOpacity
+    style={[styles.actionButton, styles.editButton]}
+    onPress={() => navigation.navigate('AddEditUserScreen', { 
+      user: item, 
+      isEdit: true,
+      onUserUpdated: fetchUserList 
+    })}
+  >
+    <Ionicons name="create" size={16} color="#3498DB" />
+    <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
+      {translate('edit')}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.actionButton, 
+      styles.deleteButton,
+      item.id === currentUser?.id && styles.disabledButton
+    ]}
+    onPress={() => confirmDelete(item)}
+    disabled={item.id === currentUser?.id}
+  >
+    <Ionicons name="trash" size={16} color={item.id === currentUser?.id ? "#ccc" : "#E74C3C"} />
+    <Text style={[
+      styles.actionButtonText, 
+      { color: item.id === currentUser?.id ? "#ccc" : "#E74C3C" }, 
+      isRTL && commonStyles.arabicText
+    ]}>
+      {translate('delete')}
+    </Text>
+  </TouchableOpacity>
+</View>
+
     </View>
   );
 
@@ -681,6 +696,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  permissionButton: {
+  backgroundColor: 'rgba(155, 89, 182, 0.1)',
+  borderWidth: 1,
+  borderColor: '#9B59B6',
+},
 });
 
 export default UserManagementScreen;

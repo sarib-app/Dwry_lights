@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const { width } = Dimensions.get('window');
 
@@ -19,24 +21,40 @@ const ReportsDashboardScreen = ({ navigation }) => {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Initialize language and role
   useEffect(() => {
-    const loadLanguage = async () => {
-      const lang = await languageService.loadSavedLanguage();
-      setCurrentLanguage(lang);
-      setIsRTL(lang === 'ar');
+    const initializeData = async () => {
+      try {
+        // Load language
+        const lang = await languageService.loadSavedLanguage();
+        setCurrentLanguage(lang);
+        setIsRTL(lang === 'ar');
+
+        // Get user role
+        const role = await getUserRole();
+        setRoleId(role);
+
+        // Fetch user permissions
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const checkUserRole = async () => {
-      const role = await getUserRole();
-      setRoleId(role);
-    };
-
-    loadLanguage();
-    checkUserRole();
+    initializeData();
 
     const unsubscribe = languageService.addListener(() => {
+      const loadLanguage = async () => {
+        const lang = await languageService.loadSavedLanguage();
+        setCurrentLanguage(lang);
+        setIsRTL(lang === 'ar');
+      };
       loadLanguage();
     });
 
@@ -45,33 +63,33 @@ const ReportsDashboardScreen = ({ navigation }) => {
 
   const translate = (key) => languageService.translate(key);
 
-  // All report items
+  // All report items with their module names
   const allReportItems = [
-    { id: 1, titleKey: 'salesReport', icon: 'bar-chart', color: '#3498DB', category: 'sales' },
-    { id: 2, titleKey: 'customerReport', icon: 'people', color: '#9B59B6', category: 'customer' },
-    { id: 3, titleKey: 'inventoryStats', icon: 'cube', color: '#E74C3C', category: 'inventory' },
-    { id: 4, titleKey: 'financialSummary', icon: 'wallet', color: '#27AE60', category: 'financial' },
-    { id: 5, titleKey: 'setSalesTarget', icon: 'target', color: '#F39C12', category: 'targets' },
-    { id: 6, titleKey: 'salesTargetReport', icon: 'document-text', color: '#1ABC9C', category: 'targets' },
-    { id: 7, titleKey: 'recordVisit', icon: 'location', color: '#D35400', category: 'visits' },
-    { id: 8, titleKey: 'visitReport', icon: 'map', color: '#16A085', category: 'visits' },
+    { id: 1, titleKey: 'salesReport', module: 'sales_report', icon: 'bar-chart', color: '#3498DB', category: 'sales' },
+    { id: 2, titleKey: 'customerReport', module: 'customer_report', icon: 'people', color: '#9B59B6', category: 'customer' },
+    { id: 3, titleKey: 'inventoryStats', module: 'inventory_stats', icon: 'cube', color: '#E74C3C', category: 'inventory' },
+    { id: 4, titleKey: 'financialSummary', module: 'financial_summary', icon: 'wallet', color: '#27AE60', category: 'financial' },
+    { id: 5, titleKey: 'setSalesTarget', module: 'set_sales_target', icon: 'target', color: '#F39C12', category: 'targets' },
+    { id: 6, titleKey: 'salesTargetReport', module: 'sales_target_report', icon: 'document-text', color: '#1ABC9C', category: 'targets' },
+    { id: 7, titleKey: 'recordVisit', module: 'record_visit', icon: 'location', color: '#D35400', category: 'visits' },
+    { id: 8, titleKey: 'visitReport', module: 'visit_report', icon: 'map', color: '#16A085', category: 'visits' },
   ];
 
-  // Staff-only report items (role ID 3)
-  const staffReportItems = [
-    { id: 7, titleKey: 'recordVisit', icon: 'location', color: '#D35400', category: 'visits' },
-    { id: 8, titleKey: 'visitReport', icon: 'map', color: '#16A085', category: 'visits' },
-  ];
-
-  // Get report items based on role
-  const getReportItemsForRole = () => {
-    if (roleId === 3) {
-      return staffReportItems;
+  // Filter report items based on permissions
+  const getVisibleReportItems = () => {
+    // If not role 3 (admin), show all items
+    if (roleId !== 3) {
+      return allReportItems;
     }
-    return allReportItems;
+    
+    // For role 3 (staff), filter by permissions
+    return allReportItems.filter(item => {
+      // Check if user has module access permission (e.g., "sales_report.management")
+      return simplePermissions.hasModuleAccess(item.module);
+    });
   };
 
-  const reportItems = getReportItemsForRole();
+  const reportItems = getVisibleReportItems();
 
   const allCategories = [
     { key: 'sales', titleKey: 'salesReports', icon: 'trending-up' },
@@ -82,7 +100,7 @@ const ReportsDashboardScreen = ({ navigation }) => {
     { key: 'visits', titleKey: 'customerVisits', icon: 'location' },
   ];
 
-  // Get categories that have items for current role
+  // Get categories that have visible items
   const getVisibleCategories = () => {
     const visibleCategories = [];
     
@@ -99,7 +117,6 @@ const ReportsDashboardScreen = ({ navigation }) => {
   const categories = getVisibleCategories();
 
   const handleReportPress = (titleKey) => {
-    const screenName = translate(titleKey).replace(/\s+/g, '');
     navigation.navigate(titleKey);
   };
 
@@ -108,7 +125,7 @@ const ReportsDashboardScreen = ({ navigation }) => {
       key={item.id}
       style={[
         styles.actionCard,
-        roleId === 3 && styles.staffActionCard // Special styling for staff
+        roleId === 3 && styles.staffActionCard
       ]}
       onPress={() => handleReportPress(item.titleKey)}
       activeOpacity={0.7}
@@ -132,7 +149,6 @@ const ReportsDashboardScreen = ({ navigation }) => {
   const renderCategory = (category) => {
     const categoryItems = reportItems.filter(item => item.category === category.key);
     
-    // Don't render category if no items
     if (categoryItems.length === 0) {
       return null;
     }
@@ -146,13 +162,13 @@ const ReportsDashboardScreen = ({ navigation }) => {
           </Text>
           {roleId === 3 && (
             <View style={styles.staffBadge}>
-              <Text style={styles.staffBadgeText}>Staff Access</Text>
+              <Text style={styles.staffBadgeText}>Permission Based</Text>
             </View>
           )}
         </View>
         <View style={[
           styles.actionsGrid,
-          roleId === 3 && styles.staffActionsGrid // Center items for staff
+          roleId === 3 && styles.staffActionsGrid
         ]}>
           {categoryItems.map(renderReportCard)}
         </View>
@@ -160,20 +176,12 @@ const ReportsDashboardScreen = ({ navigation }) => {
     );
   };
 
-  // Get header subtitle based on role
-  const getHeaderSubtitle = () => {
-    if (roleId === 3) {
-      return translate('staffReportsAccess') || 'Staff Reports - Limited Access';
-    }
-    return translate('businessAnalytics');
-  };
-
-  // Show loading state if role is not determined yet
-  if (roleId === null) {
+  // Show loading state
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Loading permissions...</Text>
         </View>
       </SafeAreaView>
     );
@@ -189,13 +197,14 @@ const ReportsDashboardScreen = ({ navigation }) => {
         >
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>{translate('reportsDashboard')}</Text>
-            <Text style={styles.headerSubtitle}>{getHeaderSubtitle()}</Text>
-            {roleId === 3 && (
-              <View style={styles.roleIndicator}>
-                <Ionicons name="person-circle" size={16} color="#fff" />
-                <Text style={styles.roleText}>Staff Member</Text>
-              </View>
-            )}
+            <Text style={styles.headerSubtitle}>
+              {roleId !== 3 
+                ? 'Admin - Full Access to All Reports'
+                : reportItems.length > 0 
+                  ? `${reportItems.length} reports available` 
+                  : 'No report permissions assigned'
+              }
+            </Text>
           </View>
         </LinearGradient>
       </View>
@@ -218,15 +227,18 @@ const ReportsDashboardScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Staff Welcome Message */}
-        {roleId === 3 && reportItems.length > 0 && (
+        {/* Welcome Message */}
+        {reportItems.length > 0 && (
           <View style={styles.staffWelcomeCard}>
             <View style={styles.staffWelcomeHeader}>
               <Ionicons name="information-circle" size={24} color="#D35400" />
-              <Text style={styles.staffWelcomeTitle}>Staff Dashboard</Text>
+              {/* <Text style={styles.staffWelcomeTitle">Reports Dashboard</Text> */}
+              <Text  style={styles.staffWelcomeTitle}>
+                Reports Dashboard
+              </Text>
             </View>
             <Text style={styles.staffWelcomeText}>
-              You have access to visit management features. Record customer visits and view visit reports to track your field activities.
+              You have access to {reportItems.length} report modules based on your assigned permissions.
             </Text>
           </View>
         )}
@@ -234,6 +246,7 @@ const ReportsDashboardScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -270,22 +283,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
-  },
-  roleIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  roleText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
   },
   content: {
     flex: 1,
@@ -341,7 +338,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   staffActionCard: {
-    width: (width - 65) / 2, // Slightly smaller for staff
+    width: (width - 65) / 2,
     marginHorizontal: 5,
   },
   cardGradient: {

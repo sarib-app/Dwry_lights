@@ -58,6 +58,7 @@ import PurchaseInvoiceListScreen from '../PurchaseInvoice/PurchaseInvoiceList';
 import AddPurchaseInvoiceScreen from '../PurchaseInvoice/AddPurchaseInvoice';
 import InventorySelectorScreen from '../Inventory/InventorySelector';
 import EditPurchaseInvoiceScreen from '../PurchaseInvoice/EditInvoiceScreen';
+import PermissionManagerScreen from '../UserManagmentScreen.js/PemrissionManager';
 
 const Stack = createStackNavigator();
 
@@ -76,7 +77,6 @@ const AuthStack = () => {
         <Stack.Screen name="AddInventory" component={AddInventoryScreen} options={{ headerShown: false }} />
         <Stack.Screen name="InventoryManagement" component={InventoryManagementScreen} options={{ headerShown: false }} />
         <Stack.Screen name="EditInventory" component={EditInventoryScreen} options={{ headerShown: false }} />
-
        <Stack.Screen name="CustomerManagement" component={CustomerManagementScreen} options={{ headerShown: false }} />
        <Stack.Screen name="AddCustomer" component={AddCustomerScreen} options={{ headerShown: false }}  /> 
        <Stack.Screen name="EditCustomer" component={EditCustomerScreen} options={{ headerShown: false }} />
@@ -143,6 +143,9 @@ const AuthStack = () => {
 
 
 <Stack.Screen name="InventorySelectorScreen" component={InventorySelectorScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="PermissionManagerScreen" component={PermissionManagerScreen} options={{ headerShown: false }} />
+
 
 
 
