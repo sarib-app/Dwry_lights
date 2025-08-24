@@ -18,6 +18,9 @@ import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import commonStyles from '../Globals/CommonStyles';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -29,6 +32,8 @@ const UserManagementScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
 
   // Data states
   const [userList, setUserList] = useState([]);
@@ -51,8 +56,45 @@ const UserManagementScreen = ({ navigation }) => {
     setIsRTL(language === 'ar');
     
     await loadUserData();
+    await initializePermissions();
     fetchUserList();
   };
+
+  // Initialize permissions and role
+  const initializePermissions = async () => {
+    try {
+      // Get user role
+      const role = await getUserRole();
+      setRoleId(role);
+
+      // Fetch user permissions if not admin
+      if (role === 3) {
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      }
+    } catch (error) {
+      console.error('Error initializing permissions:', error);
+    }
+  };
+
+  // Permission check functions
+  const hasUserPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `user.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'user'
+    );
+  };
+
+  const canCreateUsers = () => hasUserPermission('create');
+  const canEditUsers = () => hasUserPermission('edit');
+  const canDeleteUsers = () => hasUserPermission('delete');
+  const canViewUsers = () => hasUserPermission('view') || hasUserPermission('management');
 
   // Load user data from AsyncStorage
   const loadUserData = async () => {
@@ -133,6 +175,12 @@ const UserManagementScreen = ({ navigation }) => {
 
   // Delete user
   const deleteUser = async (userId) => {
+    // Check delete permission
+    if (!canDeleteUsers()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete users');
+      return;
+    }
+
     const token = await getAuthToken();
     if (!token) {
       Alert.alert(translate('error'), translate('authTokenNotFound'));
@@ -162,11 +210,54 @@ const UserManagementScreen = ({ navigation }) => {
     }
   };
 
+  // Handle edit user
+  const handleEditUser = (user) => {
+    if (!canEditUsers()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit users');
+      return;
+    }
+    navigation.navigate('AddEditUserScreen', { 
+      user: user, 
+      isEdit: true,
+      onUserUpdated: fetchUserList 
+    });
+  };
+
+  // Handle add user
+  const handleAddUser = () => {
+    if (!canCreateUsers()) {
+      Alert.alert('Access Denied', 'You do not have permission to create users');
+      return;
+    }
+    navigation.navigate('AddEditUserScreen', { 
+      isEdit: false,
+      onUserAdded: fetchUserList 
+    });
+  };
+
+  // Handle permissions
+  const handlePermissions = (user) => {
+    if (!canEditUsers()) {
+      Alert.alert('Access Denied', 'You do not have permission to manage user permissions');
+      return;
+    }
+    navigation.navigate('PermissionManagerScreen', { 
+      userId: user.id,
+      userName: `${user.first_name} ${user.last_name}`,
+      userEmail: user.email
+    });
+  };
+
   // Confirm delete
   const confirmDelete = (user) => {
     // Prevent deleting own account
     if (user.id === currentUser?.id) {
       Alert.alert(translate('error'), translate('cannotDeleteOwnAccount'));
+      return;
+    }
+
+    if (!canDeleteUsers()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete users');
       return;
     }
 
@@ -345,54 +436,63 @@ const UserManagementScreen = ({ navigation }) => {
 
       {/* Action Buttons */}
       <View style={[styles.actionButtons, isRTL && styles.rtlActionButtons]}>
-  <TouchableOpacity
-    style={[styles.actionButton, styles.permissionButton]}
-    onPress={() => navigation.navigate('PermissionManagerScreen', { 
-      userId: item.id,
-      userName: `${item.first_name} ${item.last_name}`,
-      userEmail: item.email
-    })}
-  >
-    <Ionicons name="key" size={16} color="#9B59B6" />
-    <Text style={[styles.actionButtonText, { color: '#9B59B6' }, isRTL && commonStyles.arabicText]}>
-      {translate('permissions')}
-    </Text>
-  </TouchableOpacity>
+        {canEditUsers() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.permissionButton]}
+            onPress={() => handlePermissions(item)}
+          >
+            <Ionicons name="key" size={16} color="#9B59B6" />
+            <Text style={[styles.actionButtonText, { color: '#9B59B6' }, isRTL && commonStyles.arabicText]}>
+              {translate('permissions')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-  <TouchableOpacity
-    style={[styles.actionButton, styles.editButton]}
-    onPress={() => navigation.navigate('AddEditUserScreen', { 
-      user: item, 
-      isEdit: true,
-      onUserUpdated: fetchUserList 
-    })}
-  >
-    <Ionicons name="create" size={16} color="#3498DB" />
-    <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
-      {translate('edit')}
-    </Text>
-  </TouchableOpacity>
+        {canEditUsers() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditUser(item)}
+          >
+            <Ionicons name="create" size={16} color="#3498DB" />
+            <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
+              {translate('edit')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-  <TouchableOpacity
-    style={[
-      styles.actionButton, 
-      styles.deleteButton,
-      item.id === currentUser?.id && styles.disabledButton
-    ]}
-    onPress={() => confirmDelete(item)}
-    disabled={item.id === currentUser?.id}
-  >
-    <Ionicons name="trash" size={16} color={item.id === currentUser?.id ? "#ccc" : "#E74C3C"} />
-    <Text style={[
-      styles.actionButtonText, 
-      { color: item.id === currentUser?.id ? "#ccc" : "#E74C3C" }, 
-      isRTL && commonStyles.arabicText
-    ]}>
-      {translate('delete')}
-    </Text>
-  </TouchableOpacity>
-</View>
+        {canDeleteUsers() && (
+          <TouchableOpacity
+            style={[
+              styles.actionButton, 
+              styles.deleteButton,
+              item.id === currentUser?.id && styles.disabledButton
+            ]}
+            onPress={() => confirmDelete(item)}
+            disabled={item.id === currentUser?.id}
+          >
+            <Ionicons name="trash" size={16} color={item.id === currentUser?.id ? "#ccc" : "#E74C3C"} />
+            <Text style={[
+              styles.actionButtonText, 
+              { color: item.id === currentUser?.id ? "#ccc" : "#E74C3C" }, 
+              isRTL && commonStyles.arabicText
+            ]}>
+              {translate('delete')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
+        {!canEditUsers() && !canDeleteUsers() && canViewUsers() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.viewButton]}
+            onPress={() => {/* Handle view user details */}}
+          >
+            <Ionicons name="eye" size={16} color="#3498DB" />
+            <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
+              {translate('view')}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
@@ -409,7 +509,8 @@ const UserManagementScreen = ({ navigation }) => {
     </View>
   );
 
-  if (loading && !refreshing) {
+  // Show loading if permissions not loaded yet
+  if ((loading && !refreshing) || roleId === null) {
     return (
       <View style={commonStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
@@ -417,6 +518,27 @@ const UserManagementScreen = ({ navigation }) => {
           {translate('loadingUsers')}
         </Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view users at all
+  if (!canViewUsers()) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view users
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -438,22 +560,43 @@ const UserManagementScreen = ({ navigation }) => {
               </Text>
               <Text style={[commonStyles.headerSubtitle, isRTL && commonStyles.arabicText]}>
                 {translate('manageSystemUsers')}
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={commonStyles.addButton}
-              onPress={() => navigation.navigate('AddEditUserScreen', { 
-                isEdit: false,
-                onUserAdded: fetchUserList 
-              })}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateUsers() && (
+              <TouchableOpacity
+                style={commonStyles.addButton}
+                onPress={handleAddUser}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateUsers() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
 
       <View style={commonStyles.content}>
+        {/* Permission Info Bar */}
+        {roleId === 3 && (
+          <View style={styles.permissionBar}>
+            <View style={styles.permissionInfo}>
+              <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+              <Text style={styles.permissionText}>
+                Your permissions: 
+                {canViewUsers() && ' View'}
+                {canCreateUsers() && ' • Create'}
+                {canEditUsers() && ' • Edit'}
+                {canDeleteUsers() && ' • Delete'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Search Header */}
         {renderSearchHeader()}
 
@@ -478,6 +621,63 @@ const UserManagementScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // Permission styles
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
+  },
+
   // Search Container
   searchContainer: {
     backgroundColor: '#fff',
@@ -687,6 +887,12 @@ const styles = StyleSheet.create({
     borderColor: '#E74C3C',
   },
 
+  viewButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+    borderWidth: 1,
+    borderColor: '#3498DB',
+  },
+
   disabledButton: {
     backgroundColor: '#f5f5f5',
     borderColor: '#ccc',
@@ -696,11 +902,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+
   permissionButton: {
-  backgroundColor: 'rgba(155, 89, 182, 0.1)',
-  borderWidth: 1,
-  borderColor: '#9B59B6',
-},
+    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+    borderWidth: 1,
+    borderColor: '#9B59B6',
+  },
 });
 
 export default UserManagementScreen;

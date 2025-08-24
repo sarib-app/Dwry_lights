@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import languageService from '../Globals/Store/Lang';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -25,8 +28,51 @@ const CustomerManagementScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreData, setHasMoreData] = useState(true);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
+
+  // Initialize permissions and role
+  useEffect(() => {
+    const initializePermissions = async () => {
+      try {
+        // Get user role
+        const role = await getUserRole();
+        setRoleId(role);
+
+        // Fetch user permissions if not admin
+        if (role === 3) {
+          const permissions = await simplePermissions.fetchUserPermissions();
+          setUserPermissions(permissions);
+        }
+      } catch (error) {
+        console.error('Error initializing permissions:', error);
+      }
+    };
+
+    initializePermissions();
+    fetchCustomers();
+  }, []);
+
+  // Permission check functions
+  const hasCustomerPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `customers.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'customers'
+    );
+  };
+
+  const canCreateCustomers = () => hasCustomerPermission('create');
+  const canEditCustomers = () => hasCustomerPermission('edit');
+  const canDeleteCustomers = () => hasCustomerPermission('delete');
+  const canViewCustomers = () => hasCustomerPermission('view') || hasCustomerPermission('management');
 
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
@@ -93,6 +139,12 @@ const CustomerManagementScreen = ({ navigation }) => {
 
   // Delete customer
   const deleteCustomer = async (customerId) => {
+    // Check delete permission
+    if (!canDeleteCustomers()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete customers');
+      return;
+    }
+
     Alert.alert(
       'Delete Customer',
       'Are you sure you want to delete this customer?',
@@ -131,6 +183,24 @@ const CustomerManagementScreen = ({ navigation }) => {
     );
   };
 
+  // Handle edit customer
+  const handleEditCustomer = (customer) => {
+    if (!canEditCustomers()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit customers');
+      return;
+    }
+    navigation.navigate('EditCustomer', { customer });
+  };
+
+  // Handle add customer
+  const handleAddCustomer = () => {
+    if (!canCreateCustomers()) {
+      Alert.alert('Access Denied', 'You do not have permission to create customers');
+      return;
+    }
+    navigation.navigate('AddCustomer');
+  };
+
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer =>
     customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,10 +214,6 @@ const CustomerManagementScreen = ({ navigation }) => {
     setRefreshing(true);
     setCurrentPage(1);
     fetchCustomers(1);
-  }, []);
-
-  useEffect(() => {
-    fetchCustomers();
   }, []);
 
   // Calculate stats
@@ -175,73 +241,105 @@ const CustomerManagementScreen = ({ navigation }) => {
   };
 
   // Render customer card
-const renderCustomerCard = (customer) => (
-  <View key={customer.id} style={styles.customerCard}>
-    <Text>
-      {customer.name}
-    </Text>
-    <View style={styles.customerHeader}>
-      <View style={styles.customerInfo}>
-        <Text style={styles.customerName}>{customer.name}</Text>
-        {customer.name_ar && <Text style={styles.customerNameAr}>{customer.name_ar}</Text>}
+  const renderCustomerCard = (customer) => (
+    <View key={customer.id} style={styles.customerCard}>
+      <View style={styles.customerHeader}>
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName}>{customer.name}</Text>
+          {customer.name_ar && <Text style={styles.customerNameAr}>{customer.name_ar}</Text>}
+        </View>
+        <View style={styles.customerActions}>
+          {canEditCustomers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditCustomer(customer)}
+            >
+              <Ionicons name="pencil" size={16} color="#6B7D3D" />
+            </TouchableOpacity>
+          )}
+          {canDeleteCustomers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => deleteCustomer(customer.id)}
+            >
+              <Ionicons name="trash" size={16} color="#E74C3C" />
+            </TouchableOpacity>
+          )}
+          {!canEditCustomers() && !canDeleteCustomers() && canViewCustomers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.viewButton]}
+              onPress={() => {/* Handle view customer details */}}
+            >
+              <Ionicons name="eye" size={16} color="#3498DB" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-      <View style={styles.customerActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => navigation.navigate('EditCustomer', { customer })}
-        >
-          <Ionicons name="pencil" size={16} color="#6B7D3D" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => deleteCustomer(customer.id)}
-        >
-          <Ionicons name="trash" size={16} color="#E74C3C" />
-        </TouchableOpacity>
-      </View>
-    </View>
 
-    <View style={styles.customerDetails}>
-      <View style={styles.detailRow}>
-        <Ionicons name="location" size={16} color="#666" />
-        <Text style={styles.detailText} numberOfLines={1}>
-          {customer.territory || 'No territory'}
+      <View style={styles.customerDetails}>
+        <View style={styles.detailRow}>
+          <Ionicons name="location" size={16} color="#666" />
+          <Text style={styles.detailText} numberOfLines={1}>
+            {customer.territory || 'No territory'}
+          </Text>
+        </View>
+        <View style={styles.detailRow}>
+          <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
+          <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
+        </View>
+      </View>
+
+      {customer.address_contact && (
+        <Text style={styles.customerAddress} numberOfLines={2}>
+          {customer.address_contact}
         </Text>
-      </View>
-      <View style={styles.detailRow}>
-        <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
-        <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
-      </View>
-    </View>
+      )}
 
-    {customer.address_contact && (
-      <Text style={styles.customerAddress} numberOfLines={2}>
-        {customer.address_contact}
-      </Text>
-    )}
+      {(customer.lat && customer.long) && (
+        <TouchableOpacity style={styles.locationButton}>
+          <Ionicons name="map" size={16} color="#3498DB" />
+          <Text style={styles.locationText}>
+            {parseFloat(customer.lat).toFixed(4)}, {parseFloat(customer.long).toFixed(4)}
+          </Text>
+        </TouchableOpacity>
+      )}
 
-    {(customer.lat && customer.long) && (
-      <TouchableOpacity style={styles.locationButton}>
-        <Ionicons name="map" size={16} color="#3498DB" />
-        <Text style={styles.locationText}>
-          {parseFloat(customer.lat).toFixed(4)}, {parseFloat(customer.long).toFixed(4)}
+      {customer.added_by && (
+        <Text style={styles.addedBy}>
+          Added by: {customer.added_by.first_name} {customer.added_by.last_name} ({customer.added_by.role})
         </Text>
-      </TouchableOpacity>
-    )}
+      )}
+    </View>
+  );
 
-    {customer.added_by && (
-      <Text style={styles.addedBy}>
-        Added by: {customer.added_by.first_name} {customer.added_by.last_name} ({customer.added_by.role})
-      </Text>
-    )}
-  </View>
-);
-  if (loading && customers.length === 0) {
+  // Show loading if permissions not loaded yet
+  if (loading && customers.length === 0 || roleId === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
         <Text style={styles.loadingText}>Loading customers...</Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view customers at all
+  if (!canViewCustomers()) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view customers
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -252,7 +350,7 @@ const renderCustomerCard = (customer) => (
         <LinearGradient colors={['#6B7D3D', '#4A5D23']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.headerBackButton}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -261,17 +359,41 @@ const renderCustomerCard = (customer) => (
               <Text style={styles.headerTitle}>Customer Management</Text>
               <Text style={styles.headerSubtitle}>
                 {stats.totalCustomers} customers • {stats.territories} territories
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate('AddCustomer')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateCustomers() && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddCustomer}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateCustomers() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewCustomers() && ' View'}
+              {canCreateCustomers() && ' • Create'}
+              {canEditCustomers() && ' • Edit'}
+              {canDeleteCustomers() && ' • Delete'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -347,10 +469,10 @@ const renderCustomerCard = (customer) => (
             <Text style={styles.emptySubtext}>
               {searchQuery ? 'Try adjusting your search' : 'Add your first customer to get started'}
             </Text>
-            {!searchQuery && (
+            {!searchQuery && canCreateCustomers() && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddCustomer')}
+                onPress={handleAddCustomer}
               >
                 <Text style={styles.emptyButtonText}>Add Customer</Text>
               </TouchableOpacity>
@@ -378,6 +500,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   header: {
     marginBottom: 0,
   },
@@ -391,7 +532,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -412,6 +553,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
+    textAlign: 'center',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   addButton: {
     width: 40,
@@ -420,6 +566,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -525,6 +692,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
+  viewButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+  },
   customerDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -613,6 +783,17 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

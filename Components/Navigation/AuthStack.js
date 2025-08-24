@@ -147,14 +147,6 @@ const AuthStack = () => {
 <Stack.Screen name="PermissionManagerScreen" component={PermissionManagerScreen} options={{ headerShown: false }} />
 
 
-
-
-
-
-
-
-
-
     </Stack.Navigator>
     </NavigationContainer>
   );

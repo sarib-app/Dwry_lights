@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import languageService from '../Globals/Store/Lang';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -23,8 +26,51 @@ const SupplierManagementScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
+
+  // Initialize permissions and role
+  useEffect(() => {
+    const initializePermissions = async () => {
+      try {
+        // Get user role
+        const role = await getUserRole();
+        setRoleId(role);
+
+        // Fetch user permissions if not admin
+        if (role === 3) {
+          const permissions = await simplePermissions.fetchUserPermissions();
+          setUserPermissions(permissions);
+        }
+      } catch (error) {
+        console.error('Error initializing permissions:', error);
+      }
+    };
+
+    initializePermissions();
+    fetchSuppliers();
+  }, []);
+
+  // Permission check functions
+  const hasSupplierPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `suppliers.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'suppliers'
+    );
+  };
+
+  const canCreateSuppliers = () => hasSupplierPermission('create');
+  const canEditSuppliers = () => hasSupplierPermission('edit');
+  const canDeleteSuppliers = () => hasSupplierPermission('delete');
+  const canViewSuppliers = () => hasSupplierPermission('view') || hasSupplierPermission('management');
 
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
@@ -74,6 +120,12 @@ const SupplierManagementScreen = ({ navigation }) => {
 
   // Delete supplier
   const deleteSupplier = async (supplierId) => {
+    // Check delete permission
+    if (!canDeleteSuppliers()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete suppliers');
+      return;
+    }
+
     Alert.alert(
       'Delete Supplier',
       'Are you sure you want to delete this supplier?',
@@ -112,6 +164,24 @@ const SupplierManagementScreen = ({ navigation }) => {
     );
   };
 
+  // Handle edit supplier
+  const handleEditSupplier = (supplier) => {
+    if (!canEditSuppliers()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit suppliers');
+      return;
+    }
+    navigation.navigate('EditSupplier', { supplier });
+  };
+
+  // Handle add supplier
+  const handleAddSupplier = () => {
+    if (!canCreateSuppliers()) {
+      Alert.alert('Access Denied', 'You do not have permission to create suppliers');
+      return;
+    }
+    navigation.navigate('AddSupplier');
+  };
+
   // Filter suppliers based on search query
   const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,10 +194,6 @@ const SupplierManagementScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchSuppliers();
-  }, []);
-
-  useEffect(() => {
     fetchSuppliers();
   }, []);
 
@@ -179,18 +245,30 @@ const SupplierManagementScreen = ({ navigation }) => {
           {supplier.name_ar && <Text style={styles.supplierNameAr}>{supplier.name_ar}</Text>}
         </View>
         <View style={styles.supplierActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => navigation.navigate('EditSupplier', { supplier })}
-          >
-            <Ionicons name="pencil" size={16} color="#6B7D3D" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteSupplier(supplier.id)}
-          >
-            <Ionicons name="trash" size={16} color="#E74C3C" />
-          </TouchableOpacity>
+          {canEditSuppliers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditSupplier(supplier)}
+            >
+              <Ionicons name="pencil" size={16} color="#6B7D3D" />
+            </TouchableOpacity>
+          )}
+          {canDeleteSuppliers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => deleteSupplier(supplier.id)}
+            >
+              <Ionicons name="trash" size={16} color="#E74C3C" />
+            </TouchableOpacity>
+          )}
+          {!canEditSuppliers() && !canDeleteSuppliers() && canViewSuppliers() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.viewButton]}
+              onPress={() => {/* Handle view supplier details */}}
+            >
+              <Ionicons name="eye" size={16} color="#3498DB" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -252,19 +330,37 @@ const SupplierManagementScreen = ({ navigation }) => {
           </View>
         )}
       </View>
-
-      {/* {supplier.added_by && (
-        <Text style={styles.addedBy}>Added by user ID: {supplier.added_by}</Text>
-      )} */}
     </View>
   );
 
-  if (loading) {
+  // Show loading if permissions not loaded yet
+  if (loading || roleId === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
         <Text style={styles.loadingText}>Loading suppliers...</Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view suppliers at all
+  if (!canViewSuppliers()) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view suppliers
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -275,7 +371,7 @@ const SupplierManagementScreen = ({ navigation }) => {
         <LinearGradient colors={['#6B7D3D', '#4A5D23']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.headerBackButton}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -284,17 +380,41 @@ const SupplierManagementScreen = ({ navigation }) => {
               <Text style={styles.headerTitle}>Supplier Management</Text>
               <Text style={styles.headerSubtitle}>
                 {stats.activeSuppliers}/{stats.totalSuppliers} active • ${stats.totalCreditLimit.toLocaleString()} credit
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate('AddSupplier')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateSuppliers() && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddSupplier}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateSuppliers() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewSuppliers() && ' View'}
+              {canCreateSuppliers() && ' • Create'}
+              {canEditSuppliers() && ' • Edit'}
+              {canDeleteSuppliers() && ' • Delete'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -352,10 +472,10 @@ const SupplierManagementScreen = ({ navigation }) => {
             <Text style={styles.emptySubtext}>
               {searchQuery ? 'Try adjusting your search' : 'Add your first supplier to get started'}
             </Text>
-            {!searchQuery && (
+            {!searchQuery && canCreateSuppliers() && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddSupplier')}
+                onPress={handleAddSupplier}
               >
                 <Text style={styles.emptyButtonText}>Add Supplier</Text>
               </TouchableOpacity>
@@ -383,6 +503,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   header: {
     marginBottom: 0,
   },
@@ -396,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -417,6 +556,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
+    textAlign: 'center',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   addButton: {
     width: 40,
@@ -425,6 +569,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -546,6 +711,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
+  viewButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+  },
   contactSection: {
     marginBottom: 15,
     paddingBottom: 15,
@@ -616,11 +784,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
-  addedBy: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -647,6 +810,17 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

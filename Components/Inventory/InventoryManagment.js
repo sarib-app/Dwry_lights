@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import languageService from '../Globals/Store/Lang';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -24,8 +27,51 @@ const InventoryManagementScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [authToken, setAuthToken] = useState('');
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
+
+  // Initialize permissions and role
+  useEffect(() => {
+    const initializePermissions = async () => {
+      try {
+        // Get user role
+        const role = await getUserRole();
+        setRoleId(role);
+
+        // Fetch user permissions if not admin
+        if (role === 3) {
+          const permissions = await simplePermissions.fetchUserPermissions();
+          setUserPermissions(permissions);
+        }
+      } catch (error) {
+        console.error('Error initializing permissions:', error);
+      }
+    };
+
+    initializePermissions();
+    fetchInventory();
+  }, []);
+
+  // Permission check functions
+  const hasInventoryPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `inventory.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'inventory'
+    );
+  };
+
+  const canCreateInventory = () => hasInventoryPermission('create');
+  const canEditInventory = () => hasInventoryPermission('edit');
+  const canDeleteInventory = () => hasInventoryPermission('delete');
+  const canViewInventory = () => hasInventoryPermission('view') || hasInventoryPermission('management');
 
   // Get auth token from AsyncStorage
   const getAuthToken = async () => {
@@ -76,6 +122,12 @@ const InventoryManagementScreen = ({ navigation }) => {
 
   // Delete inventory item
   const deleteInventory = async (inventoryId) => {
+    // Check delete permission
+    if (!canDeleteInventory()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete inventory');
+      return;
+    }
+
     Alert.alert(
       'Delete Inventory',
       'Are you sure you want to delete this inventory item?',
@@ -114,6 +166,24 @@ const InventoryManagementScreen = ({ navigation }) => {
     );
   };
 
+  // Handle edit inventory
+  const handleEditInventory = (item) => {
+    if (!canEditInventory()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit inventory');
+      return;
+    }
+    navigation.navigate('EditInventory', { inventory: item });
+  };
+
+  // Handle add inventory
+  const handleAddInventory = () => {
+    if (!canCreateInventory()) {
+      Alert.alert('Access Denied', 'You do not have permission to create inventory');
+      return;
+    }
+    navigation.navigate('AddInventory');
+  };
+
   // Filter inventory based on search query
   const filteredInventory = inventory.filter(item =>
     item.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,10 +194,6 @@ const InventoryManagementScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchInventory();
-  }, []);
-
-  useEffect(() => {
     fetchInventory();
   }, []);
 
@@ -151,18 +217,30 @@ const InventoryManagementScreen = ({ navigation }) => {
           {item.vendor && <Text style={styles.vendor}>Vendor: {item.vendor}</Text>}
         </View>
         <View style={styles.inventoryActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => navigation.navigate('EditInventory', { inventory: item })}
-          >
-            <Ionicons name="pencil" size={16} color="#6B7D3D" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteInventory(item.id)}
-          >
-            <Ionicons name="trash" size={16} color="#E74C3C" />
-          </TouchableOpacity>
+          {canEditInventory() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditInventory(item)}
+            >
+              <Ionicons name="pencil" size={16} color="#6B7D3D" />
+            </TouchableOpacity>
+          )}
+          {canDeleteInventory() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => deleteInventory(item.id)}
+            >
+              <Ionicons name="trash" size={16} color="#E74C3C" />
+            </TouchableOpacity>
+          )}
+          {!canEditInventory() && !canDeleteInventory() && canViewInventory() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.viewButton]}
+              onPress={() => {/* Handle view inventory details */}}
+            >
+              <Ionicons name="eye" size={16} color="#3498DB" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -216,12 +294,34 @@ const InventoryManagementScreen = ({ navigation }) => {
     </View>
   );
 
-  if (loading) {
+  // Show loading if permissions not loaded yet
+  if (loading || roleId === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
         <Text style={styles.loadingText}>Loading inventory...</Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view inventory at all
+  if (!canViewInventory()) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view inventory
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -232,7 +332,7 @@ const InventoryManagementScreen = ({ navigation }) => {
         <LinearGradient colors={['#6B7D3D', '#4A5D23']} style={styles.headerGradient}>
           <View style={styles.headerContent}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.headerBackButton}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -241,17 +341,41 @@ const InventoryManagementScreen = ({ navigation }) => {
               <Text style={styles.headerTitle}>Inventory Management</Text>
               <Text style={styles.headerSubtitle}>
                 {inventory.length} items • Total Value: ${totals.totalValue.toFixed(2)}
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate('AddInventory')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateInventory() && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddInventory}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateInventory() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewInventory() && ' View'}
+              {canCreateInventory() && ' • Create'}
+              {canEditInventory() && ' • Edit'}
+              {canDeleteInventory() && ' • Delete'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -309,10 +433,10 @@ const InventoryManagementScreen = ({ navigation }) => {
             <Text style={styles.emptySubtext}>
               {searchQuery ? 'Try adjusting your search' : 'Add your first inventory item to get started'}
             </Text>
-            {!searchQuery && (
+            {!searchQuery && canCreateInventory() && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddInventory')}
+                onPress={handleAddInventory}
               >
                 <Text style={styles.emptyButtonText}>Add Inventory</Text>
               </TouchableOpacity>
@@ -340,6 +464,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   header: {
     marginBottom: 0,
   },
@@ -353,7 +496,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: {
+  headerBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -374,6 +517,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
+    textAlign: 'center',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   addButton: {
     width: 40,
@@ -382,6 +530,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -487,6 +656,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
+  viewButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+  },
   inventoryDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -565,6 +737,17 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

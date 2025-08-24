@@ -17,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -29,11 +32,14 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
 
   useEffect(() => {
     initializeScreen();
+    initializePermissions();
     fetchInvoices();
   }, []);
 
@@ -42,6 +48,43 @@ const SalesInvoiceListScreen = ({ navigation }) => {
     setCurrentLanguage(language);
     setIsRTL(language === 'ar');
   };
+
+  // Initialize permissions and role
+  const initializePermissions = async () => {
+    try {
+      // Get user role
+      const role = await getUserRole();
+      setRoleId(role);
+
+      // Fetch user permissions if not admin
+      if (role === 3) {
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      }
+    } catch (error) {
+      console.error('Error initializing permissions:', error);
+    }
+  };
+
+  // Permission check functions
+  const hasSalesInvoicePermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `sales_invoice.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'sales_invoice'
+    );
+  };
+
+  const canCreateSalesInvoices = () => hasSalesInvoicePermission('create');
+  const canEditSalesInvoices = () => hasSalesInvoicePermission('edit');
+  const canDeleteSalesInvoices = () => hasSalesInvoicePermission('delete');
+  const canViewSalesInvoices = () => hasSalesInvoicePermission('view') || hasSalesInvoicePermission('management');
+  const canPrintSalesInvoices = () => hasSalesInvoicePermission('print') || hasSalesInvoicePermission('share');
 
   // Fetch all invoices
   const fetchInvoices = async () => {
@@ -78,6 +121,12 @@ const SalesInvoiceListScreen = ({ navigation }) => {
 
   // Delete invoice
   const deleteInvoice = async (invoiceId) => {
+    // Check delete permission
+    if (!canDeleteSalesInvoices()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete sales invoices');
+      return;
+    }
+
     Alert.alert(
       translate('deleteInvoice'),
       translate('deleteInvoiceConfirmation'),
@@ -114,6 +163,29 @@ const SalesInvoiceListScreen = ({ navigation }) => {
         },
       ]
     );
+  };
+
+  // Handle edit invoice
+  const handleEditInvoice = (invoice) => {
+    if (!canEditSalesInvoices()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit sales invoices');
+      return;
+    }
+    navigation.navigate('EditSalesInvoice', { invoice });
+  };
+
+  // Handle add invoice
+  const handleAddInvoice = () => {
+    if (!canCreateSalesInvoices()) {
+      Alert.alert('Access Denied', 'You do not have permission to create sales invoices');
+      return;
+    }
+    navigation.navigate('AddSalesInvoice');
+  };
+
+  // Handle view invoice details
+  const handleViewInvoice = (invoice) => {
+    navigation.navigate('InvoiceDetails', { invoice });
   };
 
   // Filter invoices based on search and status
@@ -255,7 +327,7 @@ const SalesInvoiceListScreen = ({ navigation }) => {
       <View style={[styles.invoiceActions, isRTL && styles.rtlInvoiceActions]}>
         <TouchableOpacity
           style={[styles.actionButton, styles.viewButton]}
-          onPress={() => navigation.navigate('InvoiceDetails', { invoice })}
+          onPress={() => handleViewInvoice(invoice)}
         >
           <Ionicons name="eye" size={16} color="#3498DB" />
           <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && styles.arabicText]}>
@@ -263,30 +335,47 @@ const SalesInvoiceListScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => navigation.navigate('EditSalesInvoice', { invoice })}
-        >
-          <Ionicons name="pencil" size={16} color="#6B7D3D" />
-          <Text style={[styles.actionButtonText, { color: '#6B7D3D' }, isRTL && styles.arabicText]}>
-            {translate('edit')}
-          </Text>
-        </TouchableOpacity>
+        {canEditSalesInvoices() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditInvoice(invoice)}
+          >
+            <Ionicons name="pencil" size={16} color="#6B7D3D" />
+            <Text style={[styles.actionButtonText, { color: '#6B7D3D' }, isRTL && styles.arabicText]}>
+              {translate('edit')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => deleteInvoice(invoice.id)}
-        >
-          <Ionicons name="trash" size={16} color="#E74C3C" />
-          <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && styles.arabicText]}>
-            {translate('delete')}
-          </Text>
-        </TouchableOpacity>
+        {canDeleteSalesInvoices() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => deleteInvoice(invoice.id)}
+          >
+            <Ionicons name="trash" size={16} color="#E74C3C" />
+            <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && styles.arabicText]}>
+              {translate('delete')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {canPrintSalesInvoices() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.printButton]}
+            onPress={() => {/* Handle print invoice */}}
+          >
+            <Ionicons name="print" size={16} color="#9B59B6" />
+            <Text style={[styles.actionButtonText, { color: '#9B59B6' }, isRTL && styles.arabicText]}>
+              {translate('print')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 
-  if (loading) {
+  // Show loading if permissions not loaded yet
+  if (loading || roleId === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
@@ -294,6 +383,27 @@ const SalesInvoiceListScreen = ({ navigation }) => {
           {translate('loadingInvoices')}
         </Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view sales invoices at all
+  if (!canViewSalesInvoices()) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view sales invoices
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -315,17 +425,42 @@ const SalesInvoiceListScreen = ({ navigation }) => {
               </Text>
               <Text style={[styles.headerSubtitle, isRTL && styles.arabicText]}>
                 {invoices.length} {translate('invoicesTotal')} • {formatCurrency(stats.totalAmount)}
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate('AddSalesInvoice')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateSalesInvoices() && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddInvoice}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateSalesInvoices() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewSalesInvoices() && ' View'}
+              {canCreateSalesInvoices() && ' • Create'}
+              {canEditSalesInvoices() && ' • Edit'}
+              {canDeleteSalesInvoices() && ' • Delete'}
+              {canPrintSalesInvoices() && ' • Print'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -413,10 +548,10 @@ const SalesInvoiceListScreen = ({ navigation }) => {
                 : translate('addFirstInvoice')
               }
             </Text>
-            {!searchQuery && filterStatus === 'all' && (
+            {!searchQuery && filterStatus === 'all' && canCreateSalesInvoices() && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => navigation.navigate('AddSalesInvoice')}
+                onPress={handleAddInvoice}
               >
                 <Text style={[styles.emptyButtonText, isRTL && styles.arabicText]}>
                   {translate('addInvoice')}
@@ -495,6 +630,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
   header: {
     marginBottom: 0,
   },
@@ -532,6 +686,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
+    textAlign: 'center',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   addButton: {
     width: 40,
@@ -540,6 +699,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -641,9 +821,6 @@ const styles = StyleSheet.create({
   },
   rtlInvoiceHeader: {
     flexDirection: 'row-reverse',
-  },
-  invoiceInfo: {
-    flex: 1,
   },
   invoiceNumber: {
     fontSize: 18,
@@ -748,6 +925,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
+  printButton: {
+    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+  },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -778,6 +958,11 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

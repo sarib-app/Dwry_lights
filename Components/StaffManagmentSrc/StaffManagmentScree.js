@@ -18,6 +18,9 @@ import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import commonStyles from '../Globals/CommonStyles';
+import getUserRole from '../Globals/Store/GetRoleId';
+// import simplePermissions from '../Globals/Store/SimplePermissions';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -29,6 +32,8 @@ const StaffManagementScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
 
   // Data states
   const [staffList, setStaffList] = useState([]);
@@ -51,8 +56,45 @@ const StaffManagementScreen = ({ navigation }) => {
     setIsRTL(language === 'ar');
     
     await loadUserData();
+    await initializePermissions();
     fetchStaffList();
   };
+
+  // Initialize permissions and role
+  const initializePermissions = async () => {
+    try {
+      // Get user role
+      const role = await getUserRole();
+      setRoleId(role);
+
+      // Fetch user permissions if not admin
+      if (role === 3) {
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      }
+    } catch (error) {
+      console.error('Error initializing permissions:', error);
+    }
+  };
+
+  // Permission check functions
+  const hasStaffPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `staff.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'staff'
+    );
+  };
+
+  const canCreateStaff = () => hasStaffPermission('create');
+  const canEditStaff = () => hasStaffPermission('edit');
+  const canDeleteStaff = () => hasStaffPermission('delete');
+  const canViewStaff = () => hasStaffPermission('view') || hasStaffPermission('management');
 
   // Load user data from AsyncStorage
   const loadUserData = async () => {
@@ -135,6 +177,12 @@ const StaffManagementScreen = ({ navigation }) => {
 
   // Delete staff
   const deleteStaff = async (staffId) => {
+    // Check delete permission
+    if (!canDeleteStaff()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete staff members');
+      return;
+    }
+
     const token = await getAuthToken();
     if (!token) {
       Alert.alert(translate('error'), translate('authTokenNotFound'));
@@ -164,8 +212,38 @@ const StaffManagementScreen = ({ navigation }) => {
     }
   };
 
+  // Handle edit staff
+  const handleEditStaff = (staff) => {
+    if (!canEditStaff()) {
+      Alert.alert('Access Denied', 'You do not have permission to edit staff members');
+      return;
+    }
+    navigation.navigate('AddEditStaffScreen', { 
+      staff: staff, 
+      isEdit: true,
+      onStaffUpdated: fetchStaffList 
+    });
+  };
+
+  // Handle add staff
+  const handleAddStaff = () => {
+    if (!canCreateStaff()) {
+      Alert.alert('Access Denied', 'You do not have permission to create staff members');
+      return;
+    }
+    navigation.navigate('AddEditStaffScreen', { 
+      isEdit: false,
+      onStaffAdded: fetchStaffList 
+    });
+  };
+
   // Confirm delete
   const confirmDelete = (staff) => {
+    if (!canDeleteStaff()) {
+      Alert.alert('Access Denied', 'You do not have permission to delete staff members');
+      return;
+    }
+
     Alert.alert(
       translate('confirmDelete'),
       `${translate('confirmDeleteStaff')} ${staff.name}?`,
@@ -331,29 +409,41 @@ const StaffManagementScreen = ({ navigation }) => {
 
       {/* Action Buttons */}
       <View style={[styles.actionButtons, isRTL && styles.rtlActionButtons]}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => navigation.navigate('AddEditStaffScreen', { 
-            staff: item, 
-            isEdit: true,
-            onStaffUpdated: fetchStaffList 
-          })}
-        >
-          <Ionicons name="create" size={16} color="#3498DB" />
-          <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
-            {translate('edit')}
-          </Text>
-        </TouchableOpacity>
+        {canEditStaff() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditStaff(item)}
+          >
+            <Ionicons name="create" size={16} color="#3498DB" />
+            <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
+              {translate('edit')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => confirmDelete(item)}
-        >
-          <Ionicons name="trash" size={16} color="#E74C3C" />
-          <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && commonStyles.arabicText]}>
-            {translate('delete')}
-          </Text>
-        </TouchableOpacity>
+        {canDeleteStaff() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => confirmDelete(item)}
+          >
+            <Ionicons name="trash" size={16} color="#E74C3C" />
+            <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && commonStyles.arabicText]}>
+              {translate('delete')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {!canEditStaff() && !canDeleteStaff() && canViewStaff() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.viewButton]}
+            onPress={() => {/* Handle view staff details */}}
+          >
+            <Ionicons name="eye" size={16} color="#3498DB" />
+            <Text style={[styles.actionButtonText, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
+              {translate('view')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -371,7 +461,8 @@ const StaffManagementScreen = ({ navigation }) => {
     </View>
   );
 
-  if (loading && !refreshing) {
+  // Show loading if permissions not loaded yet
+  if ((loading && !refreshing) || roleId === null) {
     return (
       <View style={commonStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
@@ -379,6 +470,27 @@ const StaffManagementScreen = ({ navigation }) => {
           {translate('loadingStaff')}
         </Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view staff at all
+  if (!canViewStaff()) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view staff members
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -400,22 +512,43 @@ const StaffManagementScreen = ({ navigation }) => {
               </Text>
               <Text style={[commonStyles.headerSubtitle, isRTL && commonStyles.arabicText]}>
                 {translate('manageTeamMembers')}
+                {roleId === 3 && (
+                  <Text style={styles.permissionIndicator}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={commonStyles.addButton}
-              onPress={() => navigation.navigate('AddEditStaffScreen', { 
-                isEdit: false,
-                onStaffAdded: fetchStaffList 
-              })}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateStaff() && (
+              <TouchableOpacity
+                style={commonStyles.addButton}
+                onPress={handleAddStaff}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateStaff() && (
+              <View style={styles.addButtonPlaceholder} />
+            )}
           </View>
         </LinearGradient>
       </View>
 
       <View style={commonStyles.content}>
+        {/* Permission Info Bar */}
+        {roleId === 3 && (
+          <View style={styles.permissionBar}>
+            <View style={styles.permissionInfo}>
+              <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+              <Text style={styles.permissionText}>
+                Your permissions: 
+                {canViewStaff() && ' View'}
+                {canCreateStaff() && ' • Create'}
+                {canEditStaff() && ' • Edit'}
+                {canDeleteStaff() && ' • Delete'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Search Header */}
         {renderSearchHeader()}
 
@@ -440,6 +573,63 @@ const StaffManagementScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // Permission styles
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noAccessText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#999',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  permissionIndicator: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  addButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  permissionBar: {
+    backgroundColor: 'rgba(107, 125, 61, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7D3D',
+    fontWeight: '500',
+  },
+
   // Search Container
   searchContainer: {
     backgroundColor: '#fff',
@@ -623,6 +813,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
     borderWidth: 1,
     borderColor: '#E74C3C',
+  },
+
+  viewButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+    borderWidth: 1,
+    borderColor: '#3498DB',
   },
 
   actionButtonText: {

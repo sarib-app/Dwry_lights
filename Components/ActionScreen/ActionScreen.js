@@ -49,8 +49,8 @@ const ActionsScreen = ({navigation}) => {
     // Core Business
     { id: 1, title: 'Items', module: 'items', icon: 'cube', color: '#6B7D3D', category: 'core' },
     { id: 2, title: 'Inventory', module: 'inventory', icon: 'library', color: '#8B5A2B', category: 'core' },
-    { id: 3, title: 'Banks', module: 'banks', icon: 'grid', color: '#4A90E2', category: 'core' },
-    { id: 33, title: 'Pemrissions', module: 'permissions', icon: 'grid', color: '#9B98E2', category: 'core' },
+    // { id: 3, title: 'Banks', module: 'banks', icon: 'grid', color: '#4A90E2', category: 'core' },
+    // { id: 33, title: 'Pemrissions', module: 'permissions', icon: 'grid', color: '#9B98E2', category: 'core' },
 
     
     // People Management
