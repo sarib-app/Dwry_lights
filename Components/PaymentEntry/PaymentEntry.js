@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
+import getUserRole from '../Globals/Store/GetRoleId';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 // import { commonStyles, getStatusColor } from '../shared/CommonStyles';
 import commonStyles from '../Globals/CommonStyles';
 
@@ -31,6 +33,8 @@ const PaymentEntryListScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
 
@@ -40,10 +44,44 @@ const PaymentEntryListScreen = ({ navigation }) => {
   }, []);
 
   const initializeScreen = async () => {
-    const language = await languageService.loadSavedLanguage();
-    setCurrentLanguage(language);
-    setIsRTL(language === 'ar');
+    try {
+      // Get user role
+      const role = await getUserRole();
+      setRoleId(role);
+
+      // Fetch user permissions if not admin
+      if (role === 3) {
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      }
+
+      // Load language
+      const language = await languageService.loadSavedLanguage();
+      setCurrentLanguage(language);
+      setIsRTL(language === 'ar');
+    } catch (error) {
+      console.error('Error initializing permissions:', error);
+    }
   };
+
+  // Permission check functions
+  const hasPaymentPermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `payments.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'payments'
+    );
+  };
+
+  const canCreatePayments = () => hasPaymentPermission('create');
+  const canEditPayments = () => hasPaymentPermission('edit');
+  const canDeletePayments = () => hasPaymentPermission('delete');
+  const canViewPayments = () => hasPaymentPermission('view') || hasPaymentPermission('management');
 
   // Fetch all payment entries
   const fetchPaymentEntries = async () => {
@@ -80,6 +118,12 @@ const PaymentEntryListScreen = ({ navigation }) => {
 
   // Delete payment entry
   const deletePaymentEntry = async (entryId) => {
+    // Check delete permission
+    if (!canDeletePayments()) {
+      Alert.alert(translate('accessDenied'), translate('noPermissionToDeletePayment'));
+      return;
+    }
+
     Alert.alert(
       translate('deletePaymentEntry'),
       translate('deletePaymentEntryConfirmation'),
@@ -303,30 +347,35 @@ const PaymentEntryListScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[commonStyles.actionButton, commonStyles.editButton]}
-          onPress={() => navigation.navigate('EditPaymentEntry', { entry })}
-        >
-          <Ionicons name="pencil" size={16} color="#6B7D3D" />
-          <Text style={[commonStyles.actionButtonText, { color: '#6B7D3D' }, isRTL && commonStyles.arabicText]}>
-            {translate('edit')}
-          </Text>
-        </TouchableOpacity>
+        {canEditPayments() && (
+          <TouchableOpacity
+            style={[commonStyles.actionButton, commonStyles.editButton]}
+            onPress={() => navigation.navigate('EditPaymentEntry', { entry })}
+          >
+            <Ionicons name="pencil" size={16} color="#6B7D3D" />
+            <Text style={[commonStyles.actionButtonText, { color: '#6B7D3D' }, isRTL && commonStyles.arabicText]}>
+              {translate('edit')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[commonStyles.actionButton, commonStyles.deleteButton]}
-          onPress={() => deletePaymentEntry(entry.id)}
-        >
-          <Ionicons name="trash" size={16} color="#E74C3C" />
-          <Text style={[commonStyles.actionButtonText, { color: '#E74C3C' }, isRTL && commonStyles.arabicText]}>
-            {translate('delete')}
-          </Text>
-        </TouchableOpacity>
+        {canDeletePayments() && (
+          <TouchableOpacity
+            style={[commonStyles.actionButton, commonStyles.deleteButton]}
+            onPress={() => deletePaymentEntry(entry.id)}
+          >
+            <Ionicons name="trash" size={16} color="#E74C3C" />
+            <Text style={[commonStyles.actionButtonText, { color: '#E74C3C' }, isRTL && commonStyles.arabicText]}>
+              {translate('delete')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 
-  if (loading) {
+  // Show loading if permissions not loaded yet
+  if (loading || roleId === null) {
     return (
       <View style={commonStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
@@ -334,6 +383,27 @@ const PaymentEntryListScreen = ({ navigation }) => {
           {translate('loadingPaymentEntries')}
         </Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view payments at all
+  if (!canViewPayments()) {
+    return (
+      <SafeAreaView style={commonStyles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view payment entries
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -355,17 +425,41 @@ const PaymentEntryListScreen = ({ navigation }) => {
               </Text>
               <Text style={[commonStyles.headerSubtitle, isRTL && commonStyles.arabicText]}>
                 {paymentEntries.length} {translate('entriesTotal')} • {translate('balance')}: {formatCurrency(stats.totalCredits - stats.totalDebits)}
+                {roleId === 3 && (
+                  <Text style={{ color: '#fff', opacity: 0.8 }}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={commonStyles.addButton}
-              onPress={() => navigation.navigate('AddPaymentEntry')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreatePayments() && (
+              <TouchableOpacity
+                style={commonStyles.addButton}
+                onPress={() => navigation.navigate('AddPaymentEntry')}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreatePayments() && (
+              <View style={[commonStyles.addButton, { opacity: 0.3 }]} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewPayments() && ' View'}
+              {canCreatePayments() && ' • Create'}
+              {canEditPayments() && ' • Edit'}
+              {canDeletePayments() && ' • Delete'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={commonStyles.statsContainer}>
@@ -646,6 +740,65 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     paddingTop: 15,
+  },
+
+  // Permission-related styles
+  permissionBar: {
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#6B7D3D',
+    fontWeight: '500',
+  },
+
+  // Access denied styles
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafb',
+    paddingHorizontal: 32,
+  },
+  
+  noAccessText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

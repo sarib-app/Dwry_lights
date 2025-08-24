@@ -64,13 +64,13 @@ const ActionsScreen = ({navigation}) => {
     { id: 8, title: 'Purchase Orders', module: 'purchase_orders', icon: 'document-text', color: '#3498DB', category: 'financial' },
     { id: 9, title: 'Expenses', module: 'expenses', icon: 'card', color: '#E67E22', category: 'financial' },
     { id: 16, title: 'Purchase Invoice', module: 'purchase_invoice', icon: 'receipt', color: '#9B59B6', category: 'financial' },
+    { id: 17, title: 'Return Invoice', module: 'return_invoices', icon: 'return-up-back', color: '#C0392B', category: 'financial' },
     { id: 10, title: 'Payments', module: 'payments', icon: 'wallet', color: '#16A085', category: 'financial' },
     
     // Operations
     { id: 11, title: 'Reports', module: 'reports', icon: 'analytics', color: '#34495E', category: 'operations' },
     { id: 12, title: 'Territories', module: 'territories', icon: 'map', color: '#8E44AD', category: 'operations' },
     { id: 13, title: 'Quotations', module: 'quotations', icon: 'document-attach', color: '#2ECC71', category: 'operations' },
-    { id: 14, title: 'Returns', module: 'returns', icon: 'return-up-back', color: '#C0392B', category: 'operations' },
   ];
 
   // Filter action items based on permissions
@@ -136,6 +136,8 @@ const ActionsScreen = ({navigation}) => {
       navigation.navigate('UserManagementScreen');
     } else if(actionTitle === 'Purchase Invoice'){
       navigation.navigate('PurchaseInvoiceListScreen');
+    } else if(actionTitle === 'Return Invoice'){
+      navigation.navigate('ReturnInvoiceListScreen');
     } else {
       Alert.alert(
         actionTitle,

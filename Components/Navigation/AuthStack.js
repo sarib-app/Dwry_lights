@@ -58,6 +58,9 @@ import PurchaseInvoiceListScreen from '../PurchaseInvoice/PurchaseInvoiceList';
 import AddPurchaseInvoiceScreen from '../PurchaseInvoice/AddPurchaseInvoice';
 import InventorySelectorScreen from '../Inventory/InventorySelector';
 import EditPurchaseInvoiceScreen from '../PurchaseInvoice/EditInvoiceScreen';
+import ReturnInvoiceListScreen from '../ReturnInvoice/ReturnInvoiceList';
+import AddReturnInvoiceScreen from '../ReturnInvoice/AddReturnInvoice';
+import ReturnInvoiceDetailsScreen from '../ReturnInvoice/ReturnInvoiceDetails';
 import PermissionManagerScreen from '../UserManagmentScreen.js/PemrissionManager';
 
 const Stack = createStackNavigator();
@@ -141,6 +144,9 @@ const AuthStack = () => {
 <Stack.Screen name="AddPurchaseInvoice" component={AddPurchaseInvoiceScreen} options={{ headerShown: false }} />
 <Stack.Screen name="EditPurchaseInvoice" component={EditPurchaseInvoiceScreen} options={{ headerShown: false }} />
 
+<Stack.Screen name="ReturnInvoiceListScreen" component={ReturnInvoiceListScreen} options={{ headerShown: false }} />
+<Stack.Screen name="AddReturnInvoice" component={AddReturnInvoiceScreen} options={{ headerShown: false }} />
+<Stack.Screen name="ReturnInvoiceDetails" component={ReturnInvoiceDetailsScreen} options={{ headerShown: false }} />
 
 <Stack.Screen name="InventorySelectorScreen" component={InventorySelectorScreen} options={{ headerShown: false }} />
 

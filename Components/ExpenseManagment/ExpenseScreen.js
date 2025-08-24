@@ -16,7 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import getAuthToken from '../Globals/Store/LocalData';
+import getUserRole from '../Globals/Store/GetRoleId';
+import simplePermissions from '../Globals/Store/PermissionsDemo';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -31,6 +34,8 @@ const ExpenseListScreen = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
+  const [roleId, setRoleId] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
   
   const translate = (key) => languageService.translate(key);
 
@@ -40,10 +45,44 @@ const ExpenseListScreen = ({ navigation }) => {
   }, []);
 
   const initializeScreen = async () => {
-    const language = await languageService.loadSavedLanguage();
-    setCurrentLanguage(language);
-    setIsRTL(language === 'ar');
+    try {
+      // Get user role
+      const role = await getUserRole();
+      setRoleId(role);
+
+      // Fetch user permissions if not admin
+      if (role === 3) {
+        const permissions = await simplePermissions.fetchUserPermissions();
+        setUserPermissions(permissions);
+      }
+
+      // Load language
+      const language = await languageService.loadSavedLanguage();
+      setCurrentLanguage(language);
+      setIsRTL(language === 'ar');
+    } catch (error) {
+      console.error('Error initializing permissions:', error);
+    }
   };
+
+  // Permission check functions
+  const hasExpensePermission = (type) => {
+    // If admin (not role 3), allow everything
+    if (roleId !== 3) {
+      return true;
+    }
+    
+    // For staff (role 3), check specific permissions
+    const permissionName = `expenses.${type}`;
+    return userPermissions.some(permission => 
+      permission.name === permissionName && permission.module === 'expenses'
+    );
+  };
+
+  const canCreateExpenses = () => hasExpensePermission('create');
+  const canEditExpenses = () => hasExpensePermission('edit');
+  const canDeleteExpenses = () => hasExpensePermission('delete');
+  const canViewExpenses = () => hasExpensePermission('view') || hasExpensePermission('management');
 
   // Fetch all expenses
   const fetchExpenses = async () => {
@@ -80,6 +119,12 @@ const ExpenseListScreen = ({ navigation }) => {
 
   // Delete expense
   const deleteExpense = async (expenseId) => {
+    // Check delete permission
+    if (!canDeleteExpenses()) {
+      Alert.alert(translate('accessDenied'), translate('noPermissionToDeleteExpense'));
+      return;
+    }
+
     Alert.alert(
       translate('deleteExpense'),
       translate('deleteExpenseConfirmation'),
@@ -317,31 +362,36 @@ const ExpenseListScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => navigation.navigate('EditExpense', { expense })}
-          >
-            <Ionicons name="pencil" size={16} color="#6B7D3D" />
-            <Text style={[styles.actionButtonText, { color: '#6B7D3D' }, isRTL && styles.arabicText]}>
-              {translate('edit')}
-            </Text>
-          </TouchableOpacity>
+          {canEditExpenses() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => navigation.navigate('EditExpense', { expense })}
+            >
+              <Ionicons name="pencil" size={16} color="#6B7D3D" />
+              <Text style={[styles.actionButtonText, { color: '#6B7D3D' }, isRTL && styles.arabicText]}>
+                {translate('edit')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => deleteExpense(expense.id)}
-          >
-            <Ionicons name="trash" size={16} color="#E74C3C" />
-            <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && styles.arabicText]}>
-              {translate('delete')}
-            </Text>
-          </TouchableOpacity>
+          {canDeleteExpenses() && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={() => deleteExpense(expense.id)}
+            >
+              <Ionicons name="trash" size={16} color="#E74C3C" />
+              <Text style={[styles.actionButtonText, { color: '#E74C3C' }, isRTL && styles.arabicText]}>
+                {translate('delete')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
   };
 
-  if (loading) {
+  // Show loading if permissions not loaded yet
+  if (loading || roleId === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6B7D3D" />
@@ -349,6 +399,27 @@ const ExpenseListScreen = ({ navigation }) => {
           {translate('loadingExpenses')}
         </Text>
       </View>
+    );
+  }
+
+  // Check if user has access to view expenses at all
+  if (!canViewExpenses()) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={64} color="#ccc" />
+          <Text style={styles.noAccessText}>Access Denied</Text>
+          <Text style={styles.noAccessSubtext}>
+            You do not have permission to view expenses
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -370,17 +441,41 @@ const ExpenseListScreen = ({ navigation }) => {
               </Text>
               <Text style={[styles.headerSubtitle, isRTL && styles.arabicText]}>
                 {expenses.length} {translate('expensesTotal')} • {formatCurrency(stats.totalAmount)}
+                {roleId === 3 && (
+                  <Text style={{ color: '#fff', opacity: 0.8 }}> • Permission Based</Text>
+                )}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate('AddExpense')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
+            {canCreateExpenses() && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => navigation.navigate('AddExpense')}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {!canCreateExpenses() && (
+              <View style={[styles.addButton, { opacity: 0.3 }]} />
+            )}
           </View>
         </LinearGradient>
       </View>
+
+      {/* Permission Info Bar */}
+      {roleId === 3 && (
+        <View style={styles.permissionBar}>
+          <View style={styles.permissionInfo}>
+            <Ionicons name="information-circle" size={16} color="#6B7D3D" />
+            <Text style={styles.permissionText}>
+              Your permissions: 
+              {canViewExpenses() && ' View'}
+              {canCreateExpenses() && ' • Create'}
+              {canEditExpenses() && ' • Edit'}
+              {canDeleteExpenses() && ' • Delete'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -1019,6 +1114,65 @@ const styles = StyleSheet.create({
   arabicText: {
     textAlign: 'right',
     fontFamily: 'Arabic',
+  },
+
+  // Permission-related styles
+  permissionBar: {
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  
+  permissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  permissionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#6B7D3D',
+    fontWeight: '500',
+  },
+
+  // Access denied styles
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafb',
+    paddingHorizontal: 32,
+  },
+  
+  noAccessText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  
+  noAccessSubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  
+  backButton: {
+    backgroundColor: '#6B7D3D',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
