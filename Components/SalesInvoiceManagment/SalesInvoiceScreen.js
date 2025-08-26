@@ -84,7 +84,6 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   const canEditSalesInvoices = () => hasSalesInvoicePermission('edit');
   const canDeleteSalesInvoices = () => hasSalesInvoicePermission('delete');
   const canViewSalesInvoices = () => hasSalesInvoicePermission('view') || hasSalesInvoicePermission('management');
-  const canPrintSalesInvoices = () => hasSalesInvoicePermission('print') || hasSalesInvoicePermission('share');
 
   // Fetch all invoices
   const fetchInvoices = async () => {
@@ -358,18 +357,6 @@ const SalesInvoiceListScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         )}
-
-        {canPrintSalesInvoices() && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.printButton]}
-            onPress={() => {/* Handle print invoice */}}
-          >
-            <Ionicons name="print" size={16} color="#9B59B6" />
-            <Text style={[styles.actionButtonText, { color: '#9B59B6' }, isRTL && styles.arabicText]}>
-              {translate('print')}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -456,7 +443,6 @@ const SalesInvoiceListScreen = ({ navigation }) => {
               {canCreateSalesInvoices() && ' • Create'}
               {canEditSalesInvoices() && ' • Edit'}
               {canDeleteSalesInvoices() && ' • Delete'}
-              {canPrintSalesInvoices() && ' • Print'}
             </Text>
           </View>
         </View>
@@ -924,9 +910,6 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
-  },
-  printButton: {
-    backgroundColor: 'rgba(155, 89, 182, 0.1)',
   },
   actionButtonText: {
     fontSize: 14,

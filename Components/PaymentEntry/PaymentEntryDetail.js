@@ -322,6 +322,26 @@ const PaymentEntryDetailsScreen = ({ navigation, route }) => {
             </div>
         </div>
 
+        ${entry.credit_note_applied > 0 && entry.credit_notes ? `
+        <div class="notes-section" style="background: #e8f5e8; border-color: #4caf50;">
+            <div class="section-title">${translate('creditNotes')}</div>
+            ${entry.actual_amount ? `<p><strong>${translate('actualAmount')}:</strong> ${formatCurrency(entry.actual_amount)}</p>` : ''}
+            <p><strong>${translate('totalCreditApplied')}:</strong> -${formatCurrency(entry.credit_note_applied)}</p>
+            ${Array.isArray(entry.credit_notes) && entry.credit_notes.length > 0 ? `
+            <div style="margin-top: 15px;">
+                <p style="font-weight: bold; margin-bottom: 10px;">${translate('appliedCreditNotes')}:</p>
+                ${entry.credit_notes.map(creditNote => `
+                <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 8px; border-left: 3px solid #4caf50;">
+                    <p style="margin: 0 0 5px 0;"><strong>${translate('creditNote')} #${creditNote.credit_note_number}</strong> - ${formatCurrency(creditNote.used_amount)}</p>
+                    <p style="margin: 0 0 3px 0; font-size: 12px; color: #666;">${translate('returnInvoice')}: #${creditNote.return_invoice_number}</p>
+                    <p style="margin: 0; font-size: 12px; color: #666;">${translate('customer')}: ${creditNote.customer_name}</p>
+                </div>
+                `).join('')}
+            </div>
+            ` : ''}
+        </div>
+        ` : ''}
+
         ${entry.notes ? `
         <div class="notes-section">
             <div class="section-title">${translate('notes')}</div>
@@ -385,7 +405,7 @@ const PaymentEntryDetailsScreen = ({ navigation, route }) => {
   // Share entry details as text
   const handleShareText = async () => {
     try {
-      const entryText = `
+      let entryText = `
 ${translate('paymentEntry')}: #${entry.id}
 ${translate('paymentType')}: ${translate(entry.payment_type)}
 ${translate('transactionType')}: ${translate(entry.type)}
@@ -394,10 +414,28 @@ ${translate('amount')}: ${entry.type === 'credit' ? '+' : '-'}${formatCurrency(e
 ${translate('bankName')}: ${entry.bank_name || ''}
 ${translate('paymentMethod')}: ${entry.payment_method}
 ${entry.transaction_reference ? `${translate('transactionRef')}: ${entry.transaction_reference}` : ''}
-${translate('recordedBy')}: ${entry.recorded_by?.first_name || ''} ${entry.recorded_by?.last_name || ''}
+${translate('recordedBy')}: ${entry.recorded_by?.first_name || ''} ${entry.recorded_by?.last_name || ''}`;
 
-${translate('generatedBy')} ${translate('appName')}
-      `.trim();
+      // Add credit notes information if available
+      if (entry.credit_note_applied > 0 && entry.credit_notes) {
+        entryText += `\n\n${translate('creditNotes')}:`;
+        if (entry.actual_amount) {
+          entryText += `\n${translate('actualAmount')}: ${formatCurrency(entry.actual_amount)}`;
+        }
+        entryText += `\n${translate('totalCreditApplied')}: -${formatCurrency(entry.credit_note_applied)}`;
+        
+        if (Array.isArray(entry.credit_notes) && entry.credit_notes.length > 0) {
+          entryText += `\n\n${translate('appliedCreditNotes')}:`;
+          entry.credit_notes.forEach(creditNote => {
+            entryText += `\n- ${translate('creditNote')} #${creditNote.credit_note_number}: ${formatCurrency(creditNote.used_amount)}`;
+            entryText += `\n  ${translate('returnInvoice')}: #${creditNote.return_invoice_number}`;
+            entryText += `\n  ${translate('customer')}: ${creditNote.customer_name}`;
+          });
+        }
+      }
+
+      entryText += `\n\n${translate('generatedBy')} ${translate('appName')}`;
+      entryText = entryText.trim();
 
       await Share.share({
         message: entryText,
@@ -598,6 +636,71 @@ ${translate('generatedBy')} ${translate('appName')}
             </View>
           </View>
         </View>
+
+        {/* Credit Notes Section - Only show if credit notes were applied */}
+        {entry.credit_note_applied > 0 && entry.credit_notes && (
+          <View style={commonStyles.section}>
+            <View style={[styles.sectionHeader, isRTL && commonStyles.rtlSectionHeader]}>
+              <Ionicons name="receipt" size={24} color="#6B7D3D" />
+              <Text style={[commonStyles.sectionTitle, isRTL && commonStyles.arabicText]}>
+                {translate('creditNotes')}
+              </Text>
+            </View>
+            
+            <View style={styles.creditNotesContainer}>
+              {/* Actual Amount */}
+              {entry.actual_amount && (
+                <View style={styles.creditNoteDetailRow}>
+                  <Text style={[styles.creditNoteDetailLabel, isRTL && commonStyles.arabicText]}>
+                    {translate('actualAmount')}:
+                  </Text>
+                  <Text style={[styles.creditNoteDetailValue, isRTL && commonStyles.arabicText]}>
+                    {formatCurrency(entry.actual_amount)}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Credit Note Applied */}
+              <View style={styles.creditNoteDetailRow}>
+                <Text style={[styles.creditNoteDetailLabel, isRTL && commonStyles.arabicText]}>
+                  {translate('totalCreditApplied')}:
+                </Text>
+                <Text style={[styles.creditNoteDetailValue, isRTL && commonStyles.arabicText]}>
+                  -{formatCurrency(entry.credit_note_applied)}
+                </Text>
+              </View>
+              
+              {/* Individual Credit Notes */}
+              {Array.isArray(entry.credit_notes) && entry.credit_notes.length > 0 && (
+                <View style={styles.creditNotesList}>
+                  <Text style={[styles.creditNotesListTitle, isRTL && commonStyles.arabicText]}>
+                    {translate('appliedCreditNotes')}:
+                  </Text>
+                  {entry.credit_notes.map((creditNote, index) => (
+                    <View key={index} style={styles.creditNoteItem}>
+                      <View style={styles.creditNoteHeader}>
+                        <Text style={[styles.creditNoteNumber, isRTL && commonStyles.arabicText]}>
+                          {translate('creditNote')} #{creditNote.credit_note_number}
+                        </Text>
+                        <Text style={[styles.creditNoteAmount, isRTL && commonStyles.arabicText]}>
+                          {formatCurrency(creditNote.used_amount)}
+                        </Text>
+                      </View>
+                      <View style={styles.creditNoteDetails}>
+                        <Text style={[styles.creditNoteDetail, isRTL && commonStyles.arabicText]}>
+                          {translate('returnInvoice')}: #{creditNote.return_invoice_number}
+                        </Text>
+                        <Text style={[styles.creditNoteDetail, isRTL && commonStyles.arabicText]}>
+                          {translate('customer')}: {creditNote.customer_name}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Media Attachments */}
         {(entry.image_url || entry.video_url) && (
@@ -1099,6 +1202,86 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     flex: 1,
+  },
+
+  // Credit Notes styles
+  creditNotesContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 15,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  creditNoteDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+
+  creditNoteDetailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+  },
+
+  creditNoteDetailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  creditNotesList: {
+    marginTop: 15,
+  },
+
+  creditNotesListTitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+
+  creditNoteItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  creditNoteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+
+  creditNoteNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  creditNoteAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E74C3C', // Red color for credit notes
+  },
+
+  creditNoteDetails: {
+    marginTop: 5,
+  },
+
+  creditNoteDetail: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 3,
   },
 });
 

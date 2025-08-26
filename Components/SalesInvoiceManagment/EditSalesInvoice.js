@@ -28,7 +28,10 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
     invoice_number: invoice.invoice_number || '',
     invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],
     due_date: invoice.due_date || '',
-    items: JSON.parse(invoice.items) || [],
+    items: (JSON.parse(invoice.items) || []).map(item => ({
+      ...item,
+      cost_to_company: item.cost_to_company || 0
+    })),
     subtotal: parseFloat(invoice.subtotal || 0),
     tax_percentage: parseFloat(invoice.tax_percentage || 15),
     tax_amount: parseFloat(invoice.tax_amount || 0),
@@ -155,7 +158,8 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
       item_id: item.id,
       description: item.name,
       qty: 1,
-      price: parseFloat(item.amount || 0)
+      price: parseFloat(item.amount || 0),
+      cost_to_company: parseFloat(item.cost_price || 0)
     };
     
     setFormData(prev => {
@@ -170,7 +174,11 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
   const updateItem = (index, field, value) => {
     setFormData(prev => {
       const newItems = [...prev.items];
-      newItems[index] = { ...newItems[index], [field]: field === 'qty' || field === 'price' ? parseFloat(value) || 0 : value };
+      const currentItem = newItems[index];
+      newItems[index] = { 
+        ...currentItem, 
+        [field]: field === 'qty' || field === 'price' || field === 'cost_to_company' ? parseFloat(value) || 0 : value 
+      };
       const newData = { ...prev, items: newItems };
       calculateTotals(newData);
       return newData;
@@ -217,6 +225,16 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
       Alert.alert(translate('validationError'), translate('itemsRequired'));
       return false;
     }
+    
+    // Validate that all items have required fields
+    for (let i = 0; i < formData.items.length; i++) {
+      const item = formData.items[i];
+      if (!item.cost_to_company && item.cost_to_company !== 0) {
+        Alert.alert(translate('validationError'), `Item ${i + 1} is missing cost to company`);
+        return false;
+      }
+    }
+    
     return true;
   };
 
@@ -234,17 +252,27 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
       }
 
       const payload = {
+        customer_id: parseInt(formData.customer_id),
         invoice_number: formData.invoice_number,
-        payment_status: formData.payment_status,
-        total_amount: parseFloat(formData.total_amount),
+        invoice_date: formData.invoice_date,
+        due_date: formData.due_date,
         items: formData.items,
+        subtotal: parseFloat(formData.subtotal),
+        tax_percentage: parseFloat(formData.tax_percentage),
+        tax_amount: parseFloat(formData.tax_amount),
+        discount_percentage: parseFloat(formData.discount_percentage),
+        discount_amount: parseFloat(formData.discount_amount),
+        total_amount: parseFloat(formData.total_amount),
+        payment_status: formData.payment_status,
+        payment_method: formData.payment_method,
+        notes: formData.notes,
         created_by: formData.created_by
       };
 
       const response = await fetch(`${API_BASE_URL}/update_sale_invoice_by_id/${invoice.id}`, {
         method: 'POST',
         headers: {
-          // 'Authorization': token,
+          'Authorization': token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -454,6 +482,21 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
                 </View>
                 
                 <View style={[styles.itemInputGroup, styles.flex2]}>
+                  <Text style={[styles.itemLabel, isRTL && styles.arabicText]}>
+                    {translate('costToCompany')}
+                  </Text>
+                  <TextInput
+                    style={[styles.itemInput, isRTL && styles.arabicInput]}
+                    value={item.cost_to_company?.toString() || '0'}
+                    onChangeText={(value) => updateItem(index, 'cost_to_company', value)}
+                    keyboardType="decimal-pad"
+                    textAlign={isRTL ? 'right' : 'left'}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.itemRow}>
+                <View style={[styles.itemInputGroup, styles.flex1]}>
                   <Text style={[styles.itemLabel, isRTL && styles.arabicText]}>
                     {translate('total')}
                   </Text>

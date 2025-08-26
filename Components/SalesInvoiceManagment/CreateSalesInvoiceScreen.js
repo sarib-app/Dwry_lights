@@ -204,7 +204,8 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       item_id: item.id,
       description: item.name,
       qty: 1,
-      price: parseFloat(item.amount || 0)
+      price: parseFloat(item.amount || 0),
+      cost_to_company: parseFloat(item.cost_price || 0)
     };
     
     setFormData(prev => {
@@ -219,7 +220,11 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
   const updateItem = (index, field, value) => {
     setFormData(prev => {
       const newItems = [...prev.items];
-      newItems[index] = { ...newItems[index], [field]: field === 'qty' || field === 'price' ? parseFloat(value) || 0 : value };
+      const currentItem = newItems[index];
+      newItems[index] = { 
+        ...currentItem, 
+        [field]: field === 'qty' || field === 'price' || field === 'cost_to_company' ? parseFloat(value) || 0 : value 
+      };
       const newData = { ...prev, items: newItems };
       calculateTotals(newData);
       return newData;
@@ -266,6 +271,16 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       Alert.alert(translate('validationError'), translate('itemsRequired'));
       return false;
     }
+    
+    // Validate that all items have required fields
+    for (let i = 0; i < formData.items.length; i++) {
+      const item = formData.items[i];
+      if (!item.cost_to_company && item.cost_to_company !== 0) {
+        Alert.alert(translate('validationError'), `Item ${i + 1} is missing cost to company`);
+        return false;
+      }
+    }
+    
     if (!selectedStaff) {
       Alert.alert(translate('validationError'), translate('staffSelectionRequired'));
       return false;
@@ -307,7 +322,7 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
       const response = await fetch(`${API_BASE_URL}/add_sale_invoice`, {
         method: 'POST',
         headers: {
-          // 'Authorization': token,
+          'Authorization': token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -550,6 +565,21 @@ const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
                 </View>
                 
                 <View style={[styles.itemInputGroup, styles.flex2]}>
+                  <Text style={[styles.itemLabel, isRTL && styles.arabicText]}>
+                    {translate('costToCompany')}
+                  </Text>
+                  <TextInput
+                    style={[styles.itemInput, isRTL && styles.arabicInput]}
+                    value={item.cost_to_company?.toString() || '0'}
+                    onChangeText={(value) => updateItem(index, 'cost_to_company', value)}
+                    keyboardType="decimal-pad"
+                    textAlign={isRTL ? 'right' : 'left'}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.itemRow}>
+                <View style={[styles.itemInputGroup, styles.flex1]}>
                   <Text style={[styles.itemLabel, isRTL && styles.arabicText]}>
                     {translate('total')}
                   </Text>

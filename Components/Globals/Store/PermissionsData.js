@@ -1144,4 +1144,6 @@ const permissions = [
       "description": "To print and share visit reports",
       "type": "share"
     }
-  ]
+  ];
+
+export default permissions;

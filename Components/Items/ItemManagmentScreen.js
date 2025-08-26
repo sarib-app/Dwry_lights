@@ -170,6 +170,7 @@ const ItemManagementScreen = ({ navigation }) => {
   const filteredItems = items.filter(item =>
     item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.name_ar?.includes(searchQuery) ||
+    item.item_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -216,6 +217,12 @@ const ItemManagementScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.itemDetails}>
+        {item.item_code && (
+          <View style={styles.detailRow}>
+            <Ionicons name="barcode" size={16} color="#666" />
+            <Text style={styles.detailText}>Code: {item.item_code}</Text>
+          </View>
+        )}
         <View style={styles.detailRow}>
           <Ionicons name="cube" size={16} color="#666" />
           <Text style={styles.detailText}>Qty: {item.qty || 0}</Text>

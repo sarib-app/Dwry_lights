@@ -1589,7 +1589,8 @@ const styles = StyleSheet.create({
   },
 
   rtlTargetCard: {
-    alignItems: 'flex-end',
+    // Remove alignItems: 'flex-end' as it causes width collapse
+    // The card should maintain full width in RTL
   },
 
   targetHeader: {

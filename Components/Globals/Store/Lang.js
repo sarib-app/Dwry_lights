@@ -190,6 +190,10 @@ selectLanguage: 'Select Language',
 choosePreferred: 'Choose your preferred language',
 continue: 'Continue',
 
+// Permission Management
+assigned: 'Assigned',
+all: 'All',
+
 //Action screen
 
 items: 'Items',
@@ -273,7 +277,9 @@ address: 'Address',
 
 // Item Details
 itemDescription: 'Item Description',
+itemCode: 'Item Code',
 unitPrice: 'Unit Price',
+costToCompany: 'Cost to Company',
 
 // Actions
 print: 'Print',
@@ -496,6 +502,22 @@ debit: 'Debit',
 allPayments: 'All Payments',
 creditPayments: 'Credit Payments',
 debitPayments: 'Debit Payments',
+
+// Credit Notes
+creditNotes: 'Credit Notes',
+actualAmount: 'Actual Amount',
+loadingCreditNotes: 'Loading credit notes...',
+noCreditNotesAvailable: 'No credit notes available',
+availableCreditNotes: 'Available Credit Notes',
+returnInvoice: 'Return Invoice',
+remainingAmount: 'Remaining Amount',
+amountToUse: 'Amount to Use',
+totalCreditApplied: 'Total Credit Applied',
+createCreditNotesFirst: 'Create credit notes first',
+appliedCreditNotes: 'Applied Credit Notes',
+creditNote: 'Credit Note',
+creditNoteAmountMustBePositive: 'Credit note amount must be positive',
+creditNoteAmountExceedsRemaining: 'Credit note amount cannot exceed remaining amount',
 
 // Payment Details
 paymentDate: 'Payment Date',
@@ -1486,6 +1508,10 @@ actions: 'الإجراءات',selectLanguage: 'اختر اللغة',
 choosePreferred: 'اختر لغتك المفضلة',
 continue: 'متابعة',
 
+// Permission Management
+assigned: 'المخصصة',
+all: 'الكل',
+
 //Action Screen
 
 items: 'العناصر',
@@ -1568,7 +1594,9 @@ address: 'العنوان',
 
 // Item Details
 itemDescription: 'وصف العنصر',
+itemCode: 'رمز العنصر',
 unitPrice: 'سعر الوحدة',
+costToCompany: 'Cost to Company',
 
 // Actions
 print: 'طباعة',
@@ -1594,6 +1622,7 @@ sharingNotAvailable: 'المشاركة غير متاحة على هذا الجه�
 info: 'معلومات',
 items: 'العناصر',
 qty: 'الكمية',
+
 
 // Expense Management
 expenseManagement: 'إدارة المصروفات',
@@ -1685,7 +1714,6 @@ selectStaff: 'اختر موظف',
 selectVendor: 'اختر مورد',
 noStaffAvailable: 'لا يوجد موظفون متاحون',
 noSuppliersAvailable: 'لا يوجد موردون متاحون',
-
 
 
 // Purchase Order Management
@@ -1789,6 +1817,22 @@ debit: 'مدين',
 allPayments: 'جميع المدفوعات',
 creditPayments: 'المدفوعات الدائنة',
 debitPayments: 'المدفوعات المدينة',
+
+// Credit Notes
+creditNotes: 'إشعارات الائتمان',
+actualAmount: 'المبلغ الفعلي',
+loadingCreditNotes: 'جاري تحميل إشعارات الائتمان...',
+noCreditNotesAvailable: 'لا توجد إشعارات ائتمان متاحة',
+availableCreditNotes: 'إشعارات الائتمان المتاحة',
+returnInvoice: 'فاتورة الإرجاع',
+remainingAmount: 'المبلغ المتبقي',
+amountToUse: 'المبلغ المراد استخدامه',
+totalCreditApplied: 'إجمالي الائتمان المطبق',
+createCreditNotesFirst: 'قم بإنشاء إشعارات ائتمان أولاً',
+appliedCreditNotes: 'إشعارات الائتمان المطبقة',
+creditNote: 'إشعار الائتمان',
+creditNoteAmountMustBePositive: 'يجب أن يكون مبلغ إشعار الائتمان موجباً',
+creditNoteAmountExceedsRemaining: 'لا يمكن أن يتجاوز مبلغ إشعار الائتمان المبلغ المتبقي',
 
 // Payment Details
 paymentDate: 'تاريخ الدفع',

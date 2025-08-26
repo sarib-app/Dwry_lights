@@ -41,6 +41,10 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
     video: null,
     currentImageUrl: entry.image_url || null,
     currentVideoUrl: entry.video_url || null,
+    // Credit note fields
+    credit_note_applied: entry.credit_note_applied || 0,
+    credit_notes: entry.credit_notes || [],
+    actual_amount: entry.actual_amount || 0,
   });
 
   const [banks, setBanks] = useState([]);
@@ -55,6 +59,11 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
+  
+  // Credit note states
+  const [creditNotes, setCreditNotes] = useState([]);
+  const [selectedCreditNotes, setSelectedCreditNotes] = useState(entry.credit_notes || []);
+  const [loadingCreditNotes, setLoadingCreditNotes] = useState(false);
 
   const translate = (key) => languageService.translate(key);
 
@@ -79,6 +88,21 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
     // Update reference data when payment type changes
     updateReferenceData();
   }, [formData.payment_type]);
+
+  // Credit note effects
+  useEffect(() => {
+    if (formData.payment_type === 'sales_invoice' && formData.reference_id) {
+      resetCreditNotes();
+      fetchCreditNotes();
+      setActualAmountFromReference();
+    } else {
+      resetCreditNotes();
+    }
+  }, [formData.reference_id, formData.payment_type]);
+
+  useEffect(() => {
+    calculateFinalAmount();
+  }, [selectedCreditNotes, formData.actual_amount]);
 
   // Handle staff selection from route params
   useEffect(() => {
@@ -379,6 +403,12 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
       Alert.alert(translate('validationError'), translate('staffRequired'));
       return false;
     }
+    
+    // Validate credit notes if any are selected
+    if (selectedCreditNotes.length > 0 && !validateCreditNotes()) {
+      return false;
+    }
+    
     return true;
   };
 
@@ -407,6 +437,13 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
       formDataToSend.append('transaction_reference', formData.transaction_reference);
       formDataToSend.append('notes', formData.notes);
       formDataToSend.append('recorded_by', formData.recorded_by.toString());
+
+      // Add credit note fields if credit notes are applied
+      if (formData.credit_note_applied > 0) {
+        formDataToSend.append('credit_note_applied', formData.credit_note_applied.toString());
+        formDataToSend.append('actual_amount', formData.actual_amount.toString());
+        formDataToSend.append('credit_notes', JSON.stringify(selectedCreditNotes));
+      }
 
       // Add image if selected (new image)
       if (formData.image) {
@@ -489,6 +526,112 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
   const formatCurrency = (amount) => {
     const number = parseFloat(amount) || 0;
     return isRTL ? `${number.toFixed(2)} ر.س` : `$${number.toFixed(2)}`;
+  };
+
+  // Credit note functions
+  const fetchCreditNotes = async () => {
+    if (!formData.reference_id || formData.payment_type !== 'sales_invoice') return;
+    
+    setLoadingCreditNotes(true);
+    const token = await getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_credit_notes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sale_invoice_id: formData.reference_id
+        }),
+      });
+
+      const result = await response.json();
+      if (result.status == 200) {
+        setCreditNotes(result.data || []);
+      }
+    } catch (error) {
+      console.error('Fetch credit notes error:', error);
+    } finally {
+      setLoadingCreditNotes(false);
+    }
+  };
+
+  const setActualAmountFromReference = () => {
+    if (formData.payment_type === 'sales_invoice' && formData.reference_id) {
+      const reference = referenceData.find(r => r.id == formData.reference_id);
+      if (reference && reference.total_amount) {
+        setFormData(prev => ({ ...prev, actual_amount: reference.total_amount }));
+      }
+    }
+  };
+
+  const resetCreditNotes = () => {
+    setSelectedCreditNotes([]);
+    setFormData(prev => ({ 
+      ...prev, 
+      credit_note_applied: 0,
+      actual_amount: 0 
+    }));
+  };
+
+  const calculateFinalAmount = () => {
+    const totalCreditApplied = selectedCreditNotes.reduce((sum, cn) => sum + parseFloat(cn.used_amount || 0), 0);
+    const actualAmount = parseFloat(formData.actual_amount) || 0;
+    const finalAmount = actualAmount - totalCreditApplied;
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      credit_note_applied: totalCreditApplied,
+      amount: finalAmount.toString()
+    }));
+  };
+
+  const handleCreditNoteToggle = (creditNote) => {
+    if (isCreditNoteSelected(creditNote.credit_note_id)) {
+      setSelectedCreditNotes(prev => 
+        prev.filter(cn => cn.credit_note_id !== creditNote.credit_note_id)
+      );
+    } else {
+      setSelectedCreditNotes(prev => [...prev, {
+        ...creditNote,
+        used_amount: creditNote.remaining_amount
+      }]);
+    }
+  };
+
+  const handleCreditNoteAmountChange = (creditNoteId, amount) => {
+    setSelectedCreditNotes(prev => 
+      prev.map(cn => 
+        cn.credit_note_id === creditNoteId 
+          ? { ...cn, used_amount: parseFloat(amount) || 0 }
+          : cn
+      )
+    );
+  };
+
+  const isCreditNoteSelected = (creditNoteId) => {
+    return selectedCreditNotes.some(cn => cn.credit_note_id === creditNoteId);
+  };
+
+  const getSelectedCreditNote = (creditNoteId) => {
+    return selectedCreditNotes.find(cn => cn.credit_note_id === creditNoteId);
+  };
+
+  const validateCreditNotes = () => {
+    for (const creditNote of selectedCreditNotes) {
+      if (creditNote.used_amount <= 0) {
+        Alert.alert(translate('error'), translate('creditNoteAmountMustBePositive'));
+        return false;
+      }
+      if (creditNote.used_amount > creditNote.remaining_amount) {
+        Alert.alert(translate('error'), translate('creditNoteAmountExceedsRemaining'));
+        return false;
+      }
+    }
+    return true;
   };
 
   // Render reference item for picker
@@ -736,6 +879,114 @@ const EditPaymentEntryScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Credit Notes Section - Only show for sales invoice */}
+        {formData.payment_type === 'sales_invoice' && formData.reference_id && (
+          <View style={commonStyles.section}>
+            <Text style={[commonStyles.sectionTitle, isRTL && commonStyles.arabicText]}>
+              {translate('creditNotes')}
+            </Text>
+            
+            {/* Actual Amount Display */}
+            {formData.actual_amount > 0 && (
+              <View style={styles.actualAmountContainer}>
+                <Text style={[styles.actualAmountLabel, isRTL && commonStyles.arabicText]}>
+                  {translate('actualAmount')}:
+                </Text>
+                <Text style={[styles.actualAmountValue, isRTL && commonStyles.arabicText]}>
+                  {formatCurrency(formData.actual_amount)}
+                </Text>
+              </View>
+            )}
+
+            {/* Credit Notes List */}
+            {loadingCreditNotes ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={[styles.loadingText, isRTL && commonStyles.arabicText]}>
+                  {translate('loadingCreditNotes')}
+                </Text>
+              </View>
+            ) : creditNotes.length === 0 ? (
+              <View style={styles.noDataContainer}>
+                <Text style={[styles.noDataText, isRTL && commonStyles.arabicText]}>
+                  {translate('noCreditNotesAvailable')}
+                </Text>
+                <Text style={[styles.noDataSubtext, isRTL && commonStyles.arabicText]}>
+                  {translate('createCreditNotesFirst')}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.creditNotesContainer}>
+                <Text style={[styles.creditNotesHeaderText, isRTL && commonStyles.arabicText]}>
+                  {translate('availableCreditNotes')}
+                </Text>
+                
+                {creditNotes.map((creditNote, index) => (
+                  <View key={index} style={styles.creditNoteItem}>
+                    <View style={styles.creditNoteCheckbox}>
+                      <TouchableOpacity
+                        style={[
+                          styles.checkbox,
+                          isCreditNoteSelected(creditNote.credit_note_id) && styles.checkboxChecked
+                        ]}
+                        onPress={() => handleCreditNoteToggle(creditNote)}
+                      >
+                        {isCreditNoteSelected(creditNote.credit_note_id) && (
+                          <Ionicons name="checkmark" size={16} color="#fff" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.creditNoteDetails}>
+                      <Text style={[styles.creditNoteNumber, isRTL && commonStyles.arabicText]}>
+                        {translate('creditNote')} #{creditNote.credit_note_number}
+                      </Text>
+                      <Text style={[styles.creditNoteCustomer, isRTL && commonStyles.arabicText]}>
+                        {translate('customer')}: {creditNote.customer_name}
+                      </Text>
+                      <Text style={[styles.creditNoteReturn, isRTL && commonStyles.arabicText]}>
+                        {translate('returnInvoice')}: #{creditNote.return_invoice_number}
+                      </Text>
+                      <Text style={[styles.creditNoteRemaining, isRTL && commonStyles.arabicText]}>
+                        {translate('remainingAmount')}: {formatCurrency(creditNote.remaining_amount)}
+                      </Text>
+                    </View>
+
+                    {/* Amount Input for Selected Credit Note */}
+                    {isCreditNoteSelected(creditNote.credit_note_id) && (
+                      <View style={styles.creditNoteAmountInputContainer}>
+                        <Text style={[styles.creditNoteAmountLabel, isRTL && commonStyles.arabicText]}>
+                          {translate('amountToUse')}:
+                        </Text>
+                        <TextInput
+                          style={[styles.creditNoteAmountInput, isRTL && commonStyles.arabicInput]}
+                          placeholder="0.00"
+                          value={getSelectedCreditNote(creditNote.credit_note_id)?.used_amount?.toString() || ''}
+                          onChangeText={(value) => handleCreditNoteAmountChange(creditNote.credit_note_id, value)}
+                          keyboardType="decimal-pad"
+                          textAlign={isRTL ? 'right' : 'left'}
+                        />
+                      </View>
+                    )}
+                  </View>
+                ))}
+
+                {/* Credit Applied Summary */}
+                {selectedCreditNotes.length > 0 && (
+                  <View style={styles.creditAppliedSummary}>
+                    <Text style={[styles.creditAppliedLabel, isRTL && commonStyles.arabicText]}>
+                      {translate('totalCreditApplied')}:
+                    </Text>
+                    <Text style={[styles.creditAppliedValue, isRTL && commonStyles.arabicText]}>
+                      -{formatCurrency(formData.credit_note_applied)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Payment Details */}
         <View style={commonStyles.section}>
@@ -1231,6 +1482,184 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+
+  // Credit Notes styles
+  actualAmountContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  actualAmountLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  actualAmountValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6B7D3D',
+  },
+
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 10,
+  },
+
+  noDataContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  noDataText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  noDataSubtext: {
+    fontSize: 14,
+    color: '#bbb',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+
+  creditNotesContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  creditNotesHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+  },
+
+  creditNoteItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  creditNoteCheckbox: {
+    marginBottom: 10,
+  },
+
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#6B7D3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+
+  checkboxChecked: {
+    backgroundColor: '#6B7D3D',
+  },
+
+  creditNoteDetails: {
+    marginBottom: 10,
+  },
+
+  creditNoteNumber: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+
+  creditNoteCustomer: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
+  },
+
+  creditNoteReturn: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
+  },
+
+  creditNoteRemaining: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E74C3C',
+  },
+
+  creditNoteAmountInputContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+
+  creditNoteAmountLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+
+  creditNoteAmountInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    fontSize: 14,
+  },
+
+  creditAppliedSummary: {
+    backgroundColor: '#e8f5e8',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  creditAppliedLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  creditAppliedValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E74C3C',
   },
 });
 

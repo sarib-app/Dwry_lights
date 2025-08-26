@@ -25,6 +25,7 @@ const AddItemScreen = ({ navigation }) => {
     // inventory_id: '2', // Default inventory ID
     name: '',
     name_ar: '',
+    item_code: '',
     qty: '',
     amount: '',
     selling_rate: '',
@@ -194,6 +195,16 @@ const AddItemScreen = ({ navigation }) => {
               value={formData.name_ar}
               onChangeText={(value) => handleInputChange('name_ar', value)}
               textAlign="right"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{translate('itemCode')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item code"
+              value={formData.item_code}
+              onChangeText={(value) => handleInputChange('item_code', value)}
             />
           </View>
 

@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
 import commonStyles from '../Globals/CommonStyles';
+import permissionsData from '../Globals/Store/PermissionsData';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -26,7 +27,6 @@ const PermissionManagerScreen = ({ navigation, route }) => {
   // State management
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -36,11 +36,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
   const [selectedPermissions, setSelectedPermissions] = useState(new Set());
   const [filteredPermissions, setFilteredPermissions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' or 'all'
 
   const translate = (key) => languageService.translate(key);
 
@@ -50,15 +46,17 @@ const PermissionManagerScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     filterPermissions();
-  }, [searchQuery, allPermissions]);
+  }, [searchQuery, allPermissions, activeTab]);
 
   const initializeScreen = async () => {
     const language = await languageService.loadSavedLanguage();
     setCurrentLanguage(language);
     setIsRTL(language === 'ar');
     
+    // Load local permissions data
+    setAllPermissions(permissionsData);
+    
     await fetchUserPermissions();
-    await fetchAllPermissions(1, true);
   };
 
   // Fetch user's current permissions
@@ -96,93 +94,36 @@ const PermissionManagerScreen = ({ navigation, route }) => {
     }
   };
 
-  // Fetch all permissions with pagination
-  const fetchAllPermissions = async (page = 1, reset = false) => {
-    const token = await getAuthToken();
-    if (!token) {
-      Alert.alert(translate('error'), translate('authTokenNotFound'));
-      return;
-    }
 
-    if (page === 1) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_permissions?page=${page}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': token,
-        },
-      });
-      
-      const result = await response.json();
-      console.log('All Permissions Response:', result);
-      
-      if (result.message === 'Permissions fetched successfully') {
-        const newPermissions = result.data.data || [];
-        
-        if (reset) {
-          setAllPermissions(newPermissions);
-        } else {
-          setAllPermissions(prev => [...prev, ...newPermissions]);
-        }
-        
-        setCurrentPage(result.data.current_page);
-        setTotalPages(result.data.last_page);
-      } else {
-        Alert.alert(translate('error'), result.message || translate('failedToFetchPermissions'));
-      }
-    } catch (error) {
-      console.error('Fetch all permissions error:', error);
-      Alert.alert(translate('error'), translate('networkErrorFetchingPermissions'));
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
-    }
-  };
-
-  // Load more permissions
-  const loadMorePermissions = () => {
-    if (currentPage < totalPages && !loadingMore) {
-      fetchAllPermissions(currentPage + 1, false);
-    }
-  };
-
-  // Filter permissions based on search query
+  // Filter permissions based on search query and active tab
   const filterPermissions = () => {
-    if (!searchQuery.trim()) {
-      // Group permissions by module and sort user permissions to top
+    let permissionsToFilter = [];
+    
+    if (activeTab === 'assigned') {
+      // Show only assigned permissions
       const userPermissionIds = new Set(userPermissions.map(p => p.id));
-      const sorted = [...allPermissions].sort((a, b) => {
-        // First sort by whether user has permission (user permissions first)
-        const aHasPermission = userPermissionIds.has(a.id) ? 1 : 0;
-        const bHasPermission = userPermissionIds.has(b.id) ? 1 : 0;
-        
-        if (aHasPermission !== bHasPermission) {
-          return bHasPermission - aHasPermission;
-        }
-        
-        // Then sort by module
+      permissionsToFilter = allPermissions.filter(p => userPermissionIds.has(p.id));
+    } else {
+      // Show all permissions
+      permissionsToFilter = allPermissions;
+    }
+    
+    if (!searchQuery.trim()) {
+      // Sort by module and type
+      const sorted = [...permissionsToFilter].sort((a, b) => {
         if (a.module !== b.module) {
           return a.module.localeCompare(b.module);
         }
-        
-        // Then sort by type (module type first)
         if (a.type === 'module' && b.type !== 'module') return -1;
         if (a.type !== 'module' && b.type === 'module') return 1;
-        
         return a.name.localeCompare(b.name);
       });
-      
       setFilteredPermissions(sorted);
       return;
     }
 
-    const filtered = allPermissions.filter(permission => {
+    const filtered = permissionsToFilter.filter(permission => {
       const searchLower = searchQuery.toLowerCase();
       return (
         permission.name.toLowerCase().includes(searchLower) ||
@@ -230,8 +171,8 @@ const PermissionManagerScreen = ({ navigation, route }) => {
       
       const result = await response.json();
       console.log('Assign Permissions Response:', result);
-      
-      if (result.status === 200) {
+      console.log('result.status', result.status);
+      if (result.status == 200 || result.data) {
         Alert.alert(
           translate('success'), 
           translate('permissionsUpdatedSuccessfully'),
@@ -256,9 +197,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setCurrentPage(1);
     fetchUserPermissions();
-    fetchAllPermissions(1, true);
   }, []);
 
   // Get permission type color
@@ -304,6 +243,40 @@ const PermissionManagerScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         )}
       </View>
+    </View>
+  );
+
+  // Render tabs
+  const renderTabs = () => (
+    <View style={styles.tabsContainer}>
+      <TouchableOpacity
+        style={[
+          styles.tabButton,
+          activeTab === 'assigned' && styles.activeTabButton
+        ]}
+        onPress={() => setActiveTab('assigned')}
+      >
+        <Text style={[
+          styles.tabText,
+          activeTab === 'assigned' && styles.activeTabText
+        ]}>
+          {translate('assigned')} ({userPermissions.length})
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.tabButton,
+          activeTab === 'all' && styles.activeTabButton
+        ]}
+        onPress={() => setActiveTab('all')}
+      >
+        <Text style={[
+          styles.tabText,
+          activeTab === 'all' && styles.activeTabText
+        ]}>
+          {translate('all')} ({allPermissions.length})
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -359,7 +332,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
               ]}>
                 <Ionicons 
                   name={getPermissionTypeIcon(item.type)} 
-                  size={14} 
+                  size={12} 
                   color={getPermissionTypeColor(item.type)} 
                 />
               </View>
@@ -369,7 +342,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
                 isModuleType && styles.modulePermissionName,
                 isRTL && commonStyles.arabicText
               ]}>
-                {item.name.replace(`${item.module}.`, '')}
+                {item.name}
               </Text>
               
               <View style={[
@@ -389,10 +362,6 @@ const PermissionManagerScreen = ({ navigation, route }) => {
             <Text style={[styles.permissionDescription, isRTL && commonStyles.arabicText]}>
               {item.description}
             </Text>
-            
-            <Text style={[styles.moduleText, isRTL && commonStyles.arabicText]}>
-              {translate('module')}: {item.module}
-            </Text>
           </View>
 
           {/* Selection Indicator */}
@@ -401,7 +370,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
             isSelected && styles.selectedIndicator
           ]}>
             {isSelected && (
-              <Ionicons name="checkmark" size={16} color="#fff" />
+              <Ionicons name="checkmark" size={14} color="#fff" />
             )}
           </View>
         </View>
@@ -409,7 +378,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
         {/* User Permission Badge */}
         {isUserPermission && (
           <View style={styles.userPermissionBadge}>
-            <Ionicons name="person-circle" size={12} color="#9B59B6" />
+            <Ionicons name="person-circle" size={10} color="#9B59B6" />
             <Text style={[styles.userPermissionText, isRTL && commonStyles.arabicText]}>
               {translate('currentlyAssigned')}
             </Text>
@@ -419,19 +388,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
     );
   };
 
-  // Render load more footer
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    
-    return (
-      <View style={styles.loadMoreContainer}>
-        <ActivityIndicator size="small" color="#9B59B6" />
-        <Text style={[styles.loadMoreText, isRTL && commonStyles.arabicText]}>
-          {translate('loadingMorePermissions')}
-        </Text>
-      </View>
-    );
-  };
+
 
   // Render empty state
   const renderEmptyState = () => (
@@ -446,16 +403,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
     </View>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <View style={commonStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#9B59B6" />
-        <Text style={[commonStyles.loadingText, isRTL && commonStyles.arabicText]}>
-          {translate('loadingPermissions')}
-        </Text>
-      </View>
-    );
-  }
+
 
   return (
     <SafeAreaView style={commonStyles.container}>
@@ -502,18 +450,18 @@ const PermissionManagerScreen = ({ navigation, route }) => {
         {/* Search Header */}
         {renderSearchHeader()}
 
+        {/* Tabs */}
+        {renderTabs()}
+
         {/* Permissions List */}
         <FlatList
           data={filteredPermissions}
           renderItem={renderPermissionItem}
           keyExtractor={(item) => item.id.toString()}
           ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9B59B6']} />
           }
-          onEndReached={loadMorePermissions}
-          onEndReachedThreshold={0.1}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
         />
@@ -597,6 +545,42 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
+  // Tabs Container
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+
+  activeTabButton: {
+    backgroundColor: '#9B59B6',
+  },
+
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+
+  activeTabText: {
+    color: '#fff',
+  },
+
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,15 +609,15 @@ const styles = StyleSheet.create({
 
   permissionCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
     borderColor: 'transparent',
   },
 
@@ -662,14 +646,14 @@ const styles = StyleSheet.create({
 
   permissionInfo: {
     flex: 1,
-    marginRight: 15,
+    marginRight: 10,
   },
 
   permissionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 6,
+    gap: 6,
   },
 
   rtlPermissionTitleRow: {
@@ -677,22 +661,22 @@ const styles = StyleSheet.create({
   },
 
   typeIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   permissionName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#333',
   },
 
   modulePermissionName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#9B59B6',
   },
@@ -710,23 +694,17 @@ const styles = StyleSheet.create({
   },
 
   permissionDescription: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 6,
-    lineHeight: 16,
-  },
-
-  moduleText: {
     fontSize: 11,
-    color: '#999',
-    fontStyle: 'italic',
+    color: '#666',
+    marginBottom: 4,
+    lineHeight: 14,
   },
 
   selectionIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: '#ddd',
     alignItems: 'center',
     justifyContent: 'center',
@@ -742,30 +720,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(155, 89, 182, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
     alignSelf: 'flex-start',
-    gap: 4,
-    marginTop: 8,
+    gap: 3,
+    marginTop: 6,
   },
 
   userPermissionText: {
     fontSize: 10,
     color: '#9B59B6',
     fontWeight: '600',
-  },
-
-  // Load More
-  loadMoreContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
-  },
-
-  loadMoreText: {
-    fontSize: 14,
-    color: '#666',
   },
 
   // Save Button

@@ -26,6 +26,7 @@ const EditItemScreen = ({ navigation, route }) => {
     inventory_id: item.inventory_id || '2',
     name: item.name || '',
     name_ar: item.name_ar || '',
+    item_code: item.item_code || '',
     qty: item.qty?.toString() || '',
     amount: item.amount?.toString() || '',
     selling_rate: item.selling_rate?.toString() || '',
@@ -198,6 +199,16 @@ const EditItemScreen = ({ navigation, route }) => {
               value={formData.name_ar}
               onChangeText={(value) => handleInputChange('name_ar', value)}
               textAlign="right"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{translate('itemCode')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item code"
+              value={formData.item_code}
+              onChangeText={(value) => handleInputChange('item_code', value)}
             />
           </View>
 
