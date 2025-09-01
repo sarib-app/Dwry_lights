@@ -28,10 +28,31 @@ const EditSalesInvoiceScreen = ({ navigation, route }) => {
     invoice_number: invoice.invoice_number || '',
     invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],
     due_date: invoice.due_date || '',
-    items: (JSON.parse(invoice.items) || []).map(item => ({
-      ...item,
-      cost_to_company: item.cost_to_company || 0
-    })),
+    items: (() => {
+      // Handle both cases: items as array or items as JSON string
+      let itemsArray = [];
+      
+      if (invoice.items) {
+        if (Array.isArray(invoice.items)) {
+          // Case 1: items is already an array
+          itemsArray = invoice.items;
+        } else if (typeof invoice.items === 'string') {
+          // Case 2: items is a JSON string
+          try {
+            itemsArray = JSON.parse(invoice.items);
+          } catch (parseError) {
+            console.error('Error parsing items JSON string:', parseError);
+            itemsArray = [];
+          }
+        }
+      }
+      
+      // Map the items and ensure cost_to_company exists
+      return itemsArray.map(item => ({
+        ...item,
+        cost_to_company: item.cost_to_company || 0
+      }));
+    })(),
     subtotal: parseFloat(invoice.subtotal || 0),
     tax_percentage: parseFloat(invoice.tax_percentage || 15),
     tax_amount: parseFloat(invoice.tax_amount || 0),

@@ -718,6 +718,15 @@ customerVisits: 'Customer Visits',
   completed: 'Completed',
   revenue: 'Revenue',
   
+  // Customer Financial Values
+  customerFinancialValues: 'Customer Financial Values',
+  totalSalesInvoiceValue: 'Total Sales Invoice Value',
+  totalReturnInvoiceValue: 'Total Return Invoice Value',
+  totalPaidAmount: 'Total Paid Amount',
+  totalPendingAmount: 'Total Pending Amount',
+  totalCreditNotesValue: 'Total Credit Notes Value',
+  totalAvailableCreditNoteValue: 'Total Available Credit Note Value',
+  
   // Customer Report Filters
   customerReportFilters: 'Customer Report Filters',
   customizeReportPeriod: 'Customize Report Period',
@@ -2033,6 +2042,15 @@ customerVisits: 'زيارات العملاء',
   orderStatus: 'حالة الطلبات',
   completed: 'مكتمل',
   revenue: 'الإيرادات',
+  
+  // Customer Financial Values
+  customerFinancialValues: 'القيم المالية للعميل',
+  totalSalesInvoiceValue: 'إجمالي قيمة فواتير المبيعات',
+  totalReturnInvoiceValue: 'إجمالي قيمة فواتير الإرجاع',
+  totalPaidAmount: 'إجمالي المبلغ المدفوع',
+  totalPendingAmount: 'إجمالي المبلغ المعلق',
+  totalCreditNotesValue: 'إجمالي قيمة ملاحظات الائتمان',
+  totalAvailableCreditNoteValue: 'إجمالي قيمة ملاحظات الائتمان المتاحة',
   
   // Customer Report Filters
   customerReportFilters: 'مرشحات تقرير العميل',

@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import languageService from '../Globals/Store/Lang';
 import getAuthToken from '../Globals/Store/LocalData';
 import commonStyles from '../Globals/CommonStyles';
-import permissionsData from '../Globals/Store/PermissionsData';
+
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
 
@@ -29,6 +29,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   // Data states
   const [allPermissions, setAllPermissions] = useState([]);
@@ -53,10 +54,49 @@ const PermissionManagerScreen = ({ navigation, route }) => {
     setCurrentLanguage(language);
     setIsRTL(language === 'ar');
     
-    // Load local permissions data
-    setAllPermissions(permissionsData);
+    // Fetch all permissions from API
+    await fetchAllPermissions();
     
     await fetchUserPermissions();
+  };
+
+  // Fetch all permissions from API
+  const fetchAllPermissions = async () => {
+    const token = await getAuthToken();
+    if (!token) {
+      Alert.alert(translate('error'), translate('authTokenNotFound'));
+      return;
+    }
+
+    try {
+      setLoadingPermissions(true);
+      const response = await fetch(`${API_BASE_URL}/fetch_all_permissions`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+        },
+      });
+      
+      const result = await response.json();
+      console.log('All Permissions Response:', result);
+      
+      if (result.status === 200) {
+        const permissions = result.data || [];
+        console.log('Fetched permissions count:', permissions.length);
+        setAllPermissions(permissions);
+      } else {
+        Alert.alert(translate('error'), result.message || translate('failedToFetchPermissions'));
+        // Fallback to empty array if API fails
+        setAllPermissions([]);
+      }
+    } catch (error) {
+      console.error('Fetch all permissions error:', error);
+      Alert.alert(translate('error'), translate('networkErrorFetchingPermissions'));
+      // Fallback to empty array if network error
+      setAllPermissions([]);
+    } finally {
+      setLoadingPermissions(false);
+    }
   };
 
   // Fetch user's current permissions
@@ -80,6 +120,19 @@ const PermissionManagerScreen = ({ navigation, route }) => {
       
       if (result.status === 200) {
         const permissions = result.permissions || [];
+        // In PermissionManagerScreen fetchUserPermissions function
+// const result = await response.json();
+console.log('=== PERMISSION MANAGER API RESPONSE ===');
+console.log('API URL:', `${API_BASE_URL}/get_staff_permissions/${userId}`);
+console.log('User ID:', userId);
+console.log('Raw API Response:', result);
+console.log('Permissions from API:', result.permissions?.map(p => ({
+  id: p.id,
+  name: p.name,
+  module: p.module,
+  type: p.type
+})));
+console.log('=========================================');
         setUserPermissions(permissions);
         
         // Initialize selected permissions with user's current permissions
@@ -146,6 +199,7 @@ const PermissionManagerScreen = ({ navigation, route }) => {
   };
 
   // Save permissions
+// Save permissions - WITH DEBUG
   const savePermissions = async () => {
     const token = await getAuthToken();
     if (!token) {
@@ -156,6 +210,31 @@ const PermissionManagerScreen = ({ navigation, route }) => {
     setSaving(true);
     try {
       const permissionIds = Array.from(selectedPermissions);
+      
+      // ADD THIS DEBUG - TO SEE WHAT YOU'RE ACTUALLY SAVING
+      console.log('=== SAVING PERMISSIONS DEBUG ===');
+      console.log('User ID:', userId);
+      console.log('Selected Permission IDs:', permissionIds);
+      console.log('Selected Permissions Details:', permissionIds.map(id => {
+        const perm = allPermissions.find(p => p.id === id);
+        return perm ? {
+          id: perm.id,
+          name: perm.name,
+          module: perm.module,
+          type: perm.type,
+          description: perm.description
+        } : `ID ${id} NOT FOUND`;
+      }));
+      
+      // Check if customers and expenses are actually selected
+      const customersPermission = allPermissions.find(p => p.module === 'customers' && p.type === 'module');
+      const expensesPermission = allPermissions.find(p => p.module === 'expenses' && p.type === 'module');
+      
+      console.log('Customers permission in allPermissions:', customersPermission);
+      console.log('Expenses permission in allPermissions:', expensesPermission);
+      console.log('Is customers selected?', customersPermission ? selectedPermissions.has(customersPermission.id) : 'Permission not found');
+      console.log('Is expenses selected?', expensesPermission ? selectedPermissions.has(expensesPermission.id) : 'Permission not found');
+      console.log('================================');
       
       const response = await fetch(`${API_BASE_URL}/assign_permissions`, {
         method: 'POST',
@@ -170,8 +249,11 @@ const PermissionManagerScreen = ({ navigation, route }) => {
       });
       
       const result = await response.json();
+      console.log('=== API RESPONSE ===');
       console.log('Assign Permissions Response:', result);
       console.log('result.status', result.status);
+      console.log('==================');
+      
       if (result.status == 200 || result.data) {
         Alert.alert(
           translate('success'), 
@@ -193,11 +275,17 @@ const PermissionManagerScreen = ({ navigation, route }) => {
       setSaving(false);
     }
   };
-
   // Refresh handler
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchUserPermissions();
+    try {
+      await Promise.all([
+        fetchAllPermissions(),
+        fetchUserPermissions()
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   // Get permission type color
@@ -454,17 +542,26 @@ const PermissionManagerScreen = ({ navigation, route }) => {
         {renderTabs()}
 
         {/* Permissions List */}
-        <FlatList
-          data={filteredPermissions}
-          renderItem={renderPermissionItem}
-          keyExtractor={(item) => item.id.toString()}
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9B59B6']} />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
+        {loadingPermissions ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#9B59B6" />
+            <Text style={[styles.loadingText, isRTL && commonStyles.arabicText]}>
+              {translate('loadingPermissions')}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredPermissions}
+            renderItem={renderPermissionItem}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9B59B6']} />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -737,6 +834,20 @@ const styles = StyleSheet.create({
   // Save Button
   disabledSaveButton: {
     opacity: 0.7,
+  },
+
+  // Loading Container
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#666',
   },
 });
 

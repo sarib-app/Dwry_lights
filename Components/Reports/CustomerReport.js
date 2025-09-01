@@ -24,6 +24,7 @@ const { width: screenWidth } = Dimensions.get('window');
 const CustomerReportScreen = ({ navigation }) => {
   // State management
   const [reportData, setReportData] = useState(null);
+  const [customerValues, setCustomerValues] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
@@ -68,6 +69,32 @@ const CustomerReportScreen = ({ navigation }) => {
     }));
   };
 
+  // Fetch customer values data
+  const fetchCustomerValues = async () => {
+    if (!filters.customer_id) return;
+
+    const token = await getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_customer_values/${filters.customer_id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+        },
+      });
+      
+      const result = await response.json();
+      console.log('Customer Values API Response:', result);
+      
+      if (result.status === 200) {
+        setCustomerValues(result);
+      }
+    } catch (error) {
+      console.error('Fetch customer values error:', error);
+    }
+  };
+
   // Fetch customer report data
   const fetchCustomerReport = async () => {
     if (!filters.customer_id) {
@@ -103,6 +130,8 @@ const CustomerReportScreen = ({ navigation }) => {
       
       if (result.status === 200) {
         setReportData(result.data);
+        // Also fetch customer values after getting report data
+        await fetchCustomerValues();
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchCustomerReport'));
       }
@@ -120,6 +149,7 @@ const CustomerReportScreen = ({ navigation }) => {
     if (!filters.customer_id) return;
     setRefreshing(true);
     fetchCustomerReport();
+    // Customer values will be fetched automatically in fetchCustomerReport
   }, [filters]);
 
   // Format currency
@@ -371,6 +401,82 @@ const CustomerReportScreen = ({ navigation }) => {
     );
   };
 
+  // Render customer values section
+  const renderCustomerValues = () => {
+    if (!customerValues) return null;
+
+    const valuesData = [
+      {
+        title: translate('totalSalesInvoiceValue'),
+        value: formatCurrency(customerValues.Total_sales_invoice_value),
+        icon: 'receipt-outline',
+        color: '#6B7D3D',
+        bgColor: 'rgba(107, 125, 61, 0.1)',
+      },
+      {
+        title: translate('totalReturnInvoiceValue'),
+        value: formatCurrency(customerValues.Total_return_invoice_value),
+        icon: 'return-down-back-outline',
+        color: '#E74C3C',
+        bgColor: 'rgba(231, 76, 60, 0.1)',
+      },
+      {
+        title: translate('totalPaidAmount'),
+        value: formatCurrency(customerValues.Total_paid_amount),
+        icon: 'checkmark-circle-outline',
+        color: '#27AE60',
+        bgColor: 'rgba(39, 174, 96, 0.1)',
+      },
+      {
+        title: translate('totalPendingAmount'),
+        value: formatCurrency(customerValues.Total_pending_amount),
+        icon: 'time-outline',
+        color: '#F39C12',
+        bgColor: 'rgba(243, 156, 18, 0.1)',
+      },
+      {
+        title: translate('totalCreditNotesValue'),
+        value: formatCurrency(customerValues.Total_credit_notes_value),
+        icon: 'document-text-outline',
+        color: '#9B59B6',
+        bgColor: 'rgba(155, 89, 182, 0.1)',
+      },
+      {
+        title: translate('totalAvailableCreditNoteValue'),
+        value: formatCurrency(customerValues.Total_available_credit_note_value),
+        icon: 'wallet-outline',
+        color: '#3498DB',
+        bgColor: 'rgba(52, 152, 219, 0.1)',
+      },
+    ];
+
+    return (
+      <View style={commonStyles.card}>
+        <Text style={[styles.chartTitle, isRTL && commonStyles.arabicText]}>
+          {translate('customerFinancialValues')}
+        </Text>
+        
+        <View style={styles.valuesContainer}>
+          {valuesData.map((item, index) => (
+            <View key={index} style={[styles.valueCard, { backgroundColor: item.bgColor }]}>
+              <View style={[styles.valueIcon, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon} size={16} color="#fff" />
+              </View>
+              <View style={styles.valueContent}>
+                <Text style={[styles.valueTitle, isRTL && commonStyles.arabicText]}>
+                  {item.title}
+                </Text>
+                <Text style={[styles.valueAmount, isRTL && commonStyles.arabicText]}>
+                  {item.value}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   // Render order status summary
   const renderOrderStatus = () => {
     if (!reportData || reportData.total_orders === 0) return null;
@@ -564,6 +670,9 @@ const CustomerReportScreen = ({ navigation }) => {
 
             {/* Financial Breakdown */}
             {renderFinancialBreakdown()}
+
+            {/* Customer Values */}
+            {renderCustomerValues()}
 
             {/* Order Status */}
             {renderOrderStatus()}
@@ -770,6 +879,48 @@ const styles = StyleSheet.create({
 
   breakdownValue: {
     fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+
+  // Customer Values
+  valuesContainer: {
+    paddingVertical: 10,
+  },
+
+  valueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+
+  valueIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  valueContent: {
+    flex: 1,
+  },
+
+  valueTitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+
+  valueAmount: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },

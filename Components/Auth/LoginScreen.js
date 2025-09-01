@@ -33,8 +33,8 @@ const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'admin@gmail.com',
+    password: 'password123',
   });
   
   const [loading, setLoading] = useState(false);
