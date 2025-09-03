@@ -22,7 +22,6 @@ const token = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
 
 const AddItemScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
-    // inventory_id: '2', // Default inventory ID
     name: '',
     name_ar: '',
     item_code: '',
@@ -109,6 +108,24 @@ const AddItemScreen = ({ navigation }) => {
       Object.keys(formData).forEach(key => {
         formDataToSend.append(key, formData[key]);
       });
+
+      // Debug: Log what's being sent
+      console.log('=== ADD ITEM PAYLOAD ===');
+      console.log('🔍 CHECKING item_code and description in payload:');
+      for (let [key, value] of formDataToSend.entries()) {
+        if (typeof value === 'object' && value.uri) {
+          console.log(`${key}:`, { uri: value.uri, type: value.type, name: value.name });
+        } else {
+          console.log(`${key}:`, value);
+          // Highlight item_code and description
+          if (key === 'item_code') {
+            console.log('✅ item_code is being sent:', value);
+          }
+          if (key === 'description') {
+            console.log('✅ description is being sent:', value);
+          }
+        }
+      }
 
       // Append images
       selectedImages.forEach((image, index) => {
@@ -221,32 +238,19 @@ const AddItemScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Inventory & Quantity */}
+        {/* Quantity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Inventory & Quantity</Text>
+          <Text style={styles.sectionTitle}>Quantity</Text>
           
-          <View style={styles.row}>
-            {/* <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Inventory ID</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2"
-                value={formData.inventory_id}
-                onChangeText={(value) => handleInputChange('inventory_id', value)}
-                keyboardType="numeric"
-              />
-            </View> */}
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Quantity *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                value={formData.qty}
-                onChangeText={(value) => handleInputChange('qty', value)}
-                keyboardType="numeric"
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Quantity *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              value={formData.qty}
+              onChangeText={(value) => handleInputChange('qty', value)}
+              keyboardType="numeric"
+            />
           </View>
         </View>
 

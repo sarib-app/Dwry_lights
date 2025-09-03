@@ -17,28 +17,55 @@ import * as ImagePicker from 'expo-image-picker';
 import languageService from '../Globals/Store/Lang';
 
 const API_BASE_URL = 'https://planetdory.dwrylight.com/api';
-const AUTH_TOKEN = 'Bearer 8|tcpk0U3AxEx9nPeEY0zyOyFqQ1xwM80VQnoGH2Zlffb9dddf';
+const AUTH_TOKEN = 'Bearer nPGpb5zlVvVJ197sNyBvLiGIBWsc1X8ACRolWnLO76533a07';
 
 const EditItemScreen = ({ navigation, route }) => {
   const { item } = route.params;
   
   const [formData, setFormData] = useState({
-    inventory_id: item.inventory_id || '2',
     name: item.name || '',
     name_ar: item.name_ar || '',
-    item_code: item.item_code || '',
+    item_code: item.item_code || '', // Handle null values properly
     qty: item.qty?.toString() || '',
     amount: item.amount?.toString() || '',
     selling_rate: item.selling_rate?.toString() || '',
     cost_to_company: item.cost_to_company?.toString() || '',
-    description: item.description || '',
-    stock_in_warehouse: item.stock_in_warehouse?.toString() || '',
+    description: item.description || '', // Handle null values properly
   });
   const [selectedImages, setSelectedImages] = useState([]);
   const [existingImages, setExistingImages] = useState(item.images || []);
   const [loading, setLoading] = useState(false);
 
   const translate = (key) => languageService.translate(key);
+
+  // Debug: Log the item data when component mounts
+  useEffect(() => {
+    console.log('=== EDIT ITEM SCREEN INITIALIZATION ===');
+    console.log('Item received:', JSON.stringify(item, null, 2));
+    console.log('FormData initialized:', JSON.stringify(formData, null, 2));
+    console.log('item_code value:', item.item_code, 'type:', typeof item.item_code);
+    console.log('description value:', item.description, 'type:', typeof item.description);
+  }, []);
+
+  // Update form data when item changes (in case of timing issues)
+  useEffect(() => {
+    if (item) {
+      setFormData({
+        name: item.name || '',
+        name_ar: item.name_ar || '',
+        item_code: item.item_code || '', // This should handle null values
+        qty: item.qty?.toString() || '',
+        amount: item.amount?.toString() || '',
+        selling_rate: item.selling_rate?.toString() || '',
+        cost_to_company: item.cost_to_company?.toString() || '',
+        description: item.description || '', // This should handle null values
+      });
+      console.log('FormData updated from item:', {
+        item_code: item.item_code || '',
+        description: item.description || ''
+      });
+    }
+  }, [item]);
 
   // Handle input change
   const handleInputChange = (field, value) => {
@@ -102,25 +129,45 @@ const EditItemScreen = ({ navigation, route }) => {
     try {
       const formDataToSend = new FormData();
       
-      // Append text fields (only send non-empty values)
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== '') {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
+      // Append ALL fields exactly like Postman (including empty ones)
+      formDataToSend.append("name", formData.name || "");
+      formDataToSend.append("name_ar", formData.name_ar || "");
+      formDataToSend.append("qty", formData.qty || "");
+      formDataToSend.append("description", formData.description || "");
+      formDataToSend.append("amount", formData.amount || "");
+      formDataToSend.append("selling_rate", formData.selling_rate || "");
+      formDataToSend.append("cost_to_company", formData.cost_to_company || "");
+      formDataToSend.append("item_code", formData.item_code || "");
 
-      // Append new images
-      selectedImages.forEach((image, index) => {
-        formDataToSend.append('images[]', {
-          uri: image.uri,
-          type: 'image/jpeg',
-          name: `image_${index}.jpg`,
+      // Handle images - always append images[] field (empty if no images)
+      if (selectedImages.length > 0) {
+        selectedImages.forEach((image, index) => {
+          formDataToSend.append('images[]', {
+            uri: image.uri,
+            type: 'image/jpeg',
+            name: `image_${index}.jpg`,
+          });
         });
-      });
-
-      // If no new images, send empty string to maintain API compatibility
-      if (selectedImages.length === 0) {
+      } else {
         formDataToSend.append('images[]', '');
+      }
+
+      // Log the FormData for debugging
+      console.log('=== FORM DATA BEING SENT (matching Postman) ===');
+      console.log('🔍 CHECKING item_code and description in payload:');
+      for (let [key, value] of formDataToSend.entries()) {
+        if (typeof value === 'object' && value.uri) {
+          console.log(`${key}:`, { uri: value.uri, type: value.type, name: value.name });
+        } else {
+          console.log(`${key}:`, value);
+          // Highlight item_code and description
+          if (key === 'item_code') {
+            console.log('✅ item_code is being sent:', value);
+          }
+          if (key === 'description') {
+            console.log('✅ description is being sent:', value);
+          }
+        }
       }
 
       const response = await fetch(`${API_BASE_URL}/update_item_by_id/${item.id}`, {
@@ -135,10 +182,11 @@ const EditItemScreen = ({ navigation, route }) => {
       const result = await response.json();
       console.log('Update item response:', result);
 
-      if (result.success) {
+      // Check for success based on Postman response format (status: 200)
+      if (result.status === 200) {
         Alert.alert(
           'Success',
-          'Item updated successfully!',
+          result.message || 'Item updated successfully!',
           [
             {
               text: 'OK',
@@ -225,41 +273,17 @@ const EditItemScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Inventory & Quantity */}
+        {/* Quantity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Inventory & Quantity</Text>
+          <Text style={styles.sectionTitle}>Quantity</Text>
           
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Inventory ID</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2"
-                value={formData.inventory_id}
-                onChangeText={(value) => handleInputChange('inventory_id', value)}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Quantity</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                value={formData.qty}
-                onChangeText={(value) => handleInputChange('qty', value)}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Stock in Warehouse</Text>
+            <Text style={styles.label}>Quantity</Text>
             <TextInput
               style={styles.input}
               placeholder="0"
-              value={formData.stock_in_warehouse}
-              onChangeText={(value) => handleInputChange('stock_in_warehouse', value)}
+              value={formData.qty}
+              onChangeText={(value) => handleInputChange('qty', value)}
               keyboardType="numeric"
             />
           </View>
