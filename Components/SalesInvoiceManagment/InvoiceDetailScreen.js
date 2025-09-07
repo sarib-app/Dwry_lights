@@ -30,6 +30,7 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
   const [showActionsModal, setShowActionsModal] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
+  const [itemDetails, setItemDetails] = useState({}); // Store item details by item_id
 
   const translate = (key) => languageService.translate(key);
 
@@ -37,6 +38,13 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
     initializeScreen();
     fetchInvoiceDetails();
   }, []);
+
+  // Fetch item details when invoice changes
+  useEffect(() => {
+    if (invoice?.items) {
+      fetchItemDetails();
+    }
+  }, [invoice]);
 
   const initializeScreen = async () => {
     const language = await languageService.loadSavedLanguage();
@@ -64,7 +72,7 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
       });
       
       const result = await response.json();
-      console.log('Invoice Details API Response:', result);
+      console.log('Invoice Details API Response:', result.invoice.items);
       
       if (result.status == 200) {
         setInvoice(result.data || initialInvoice);
@@ -88,6 +96,49 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Fetch item details for each item in the invoice
+  const fetchItemDetails = async () => {
+    if (!invoice?.items || invoice.items.length === 0) return;
+    
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        console.log('No auth token for fetching item details');
+        return;
+      }
+
+      const itemDetailsMap = {};
+      
+      // Fetch details for each item
+      for (const item of invoice.items) {
+        if (item.item_id) {
+          try {
+            const response = await fetch(`${API_BASE_URL}/fetch_item_by_id/${item.item_id}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': token,
+              },
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              if (result.status === 200 && result.item) {
+                itemDetailsMap[item.item_id] = result.item;
+                console.log(`Fetched item details for ID ${item.item_id}:`, result.item);
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching item details for ID ${item.item_id}:`, error);
+          }
+        }
+      }
+      
+      setItemDetails(itemDetailsMap);
+    } catch (error) {
+      console.error('Error fetching item details:', error);
+    }
   };
 
   // Format currency
@@ -281,7 +332,7 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>${translate('itemDescription')}</th>
+                    <th>${translate('itemCode')}</th>
                     <th>${translate('quantity')}</th>
                     <th>${translate('unitPrice')}</th>
                     <th>${translate('total')}</th>
@@ -290,7 +341,7 @@ const InvoiceDetailsScreen = ({ navigation, route }) => {
             <tbody>
                 ${getItems().map(item => `
                     <tr>
-                        <td>${item.description}</td>
+                        <td>${getItemCode(item)}</td>
                         <td>${item.qty}</td>
                         <td>${formatCurrency(item.price)}</td>
                         <td>${formatCurrency(item.qty * item.price)}</td>
@@ -391,7 +442,7 @@ ${translate('totalAmount')}: ${formatCurrency(invoice.total_amount)}
 ${translate('paymentStatus')}: ${translate(invoice.payment_status)}
 
 ${translate('items')}:
-${getItems().map(item => `• ${item.description} - ${translate('qty')}: ${item.qty} - ${formatCurrency(item.qty * item.price)}`).join('\n')}
+${getItems().map(item => `• ${getItemCode(item)} - ${translate('qty')}: ${item.qty} - ${formatCurrency(item.qty * item.price)}`).join('\n')}
 
 ${translate('generatedBy')} ${translate('appName')}
       `.trim();
@@ -451,6 +502,25 @@ ${translate('generatedBy')} ${translate('appName')}
 
   // Get items safely
   const getItems = () => parseItems(invoice.items);
+
+  // Get item code with fallback logic
+  const getItemCode = (item) => {
+    if (!item?.item_id) return 'N/A';
+    
+    const itemDetail = itemDetails[item.item_id];
+    if (!itemDetail) return 'Loading...';
+    
+    // Priority: item_code -> name_ar -> name
+    if (itemDetail.item_code && itemDetail.item_code.trim() !== '') {
+      return itemDetail.item_code;
+    } else if (itemDetail.name_ar && itemDetail.name_ar.trim() !== '') {
+      return itemDetail.name_ar;
+    } else if (itemDetail.name && itemDetail.name.trim() !== '') {
+      return itemDetail.name;
+    }
+    
+    return 'N/A';
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -587,7 +657,7 @@ ${translate('generatedBy')} ${translate('appName')}
             <View key={index} style={styles.itemCard}>
               <View style={[styles.itemHeader, isRTL && styles.rtlItemHeader]}>
                 <Text style={[styles.itemDescription, isRTL && styles.arabicText]}>
-                  {item.description}
+                  {getItemCode(item)}
                 </Text>
                 <Text style={[styles.itemTotal, isRTL && styles.arabicText]}>
                   {formatCurrency(item.qty * item.price)}
