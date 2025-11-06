@@ -27,6 +27,7 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -34,6 +35,8 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -85,16 +88,23 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   const canDeleteSalesInvoices = () => hasSalesInvoicePermission('delete');
   const canViewSalesInvoices = () => hasSalesInvoicePermission('view') || hasSalesInvoicePermission('management');
 
-  // Fetch all invoices
-  const fetchInvoices = async () => {
-    const token = await getAuthToken();
-    if (!token) {
-      Alert.alert(translate('error'), translate('authTokenNotFound'));
-      return;
-    }
-
+  // Fetch all invoices with pagination
+  const fetchInvoices = async (page = 1, append = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_sale_invoices`, {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const token = await getAuthToken();
+      if (!token) {
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/fetch_all_sale_invoices?page=${page}`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -105,7 +115,27 @@ const SalesInvoiceListScreen = ({ navigation }) => {
       console.log('Sales Invoices API Response:', result);
       
       if (result.status == 200) {
-        setInvoices(result.data || []);
+        const newInvoices = result?.data || [];
+        
+        if (append) {
+          setInvoices(prev => [...prev, ...newInvoices]);
+        } else {
+          setInvoices(newInvoices);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newInvoices) && newInvoices.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newInvoices.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchInvoices'));
       }
@@ -115,6 +145,15 @@ const SalesInvoiceListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more invoices
+  const loadMoreInvoices = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchInvoices(nextPage, true);
     }
   };
 
@@ -150,7 +189,10 @@ const SalesInvoiceListScreen = ({ navigation }) => {
               
               if (result.status == 200) {
                 Alert.alert(translate('success'), translate('invoiceDeletedSuccessfully'));
-                fetchInvoices();
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchInvoices(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToDeleteInvoice'));
               }
@@ -203,7 +245,9 @@ const SalesInvoiceListScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchInvoices();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchInvoices(1, false);
   }, []);
 
   // Calculate statistics
@@ -516,9 +560,33 @@ const SalesInvoiceListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMoreInvoices();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredInvoices.length > 0 ? (
-          filteredInvoices.map(renderInvoiceCard)
+          <>
+            {filteredInvoices.map(renderInvoiceCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more invoices...</Text>
+              </View>
+            )}
+            {!hasMoreData && invoices.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more invoices to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={64} color="#ccc" />
@@ -949,6 +1017,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
   
   // Modal Styles

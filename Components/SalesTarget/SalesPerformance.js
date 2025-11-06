@@ -38,6 +38,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
   const [filteredTargets, setFilteredTargets] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'targets'
   const [activeTargetTab, setActiveTargetTab] = useState('customers'); // 'customers', 'staff', 'staffPerCustomer'
+  const [activeDashboardTab, setActiveDashboardTab] = useState('revenue'); // 'revenue', 'sales', 'visits'
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -60,7 +61,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
   useEffect(() => {
     filterTargetsByTab();
-  }, [salesTargets, activeTargetTab]);
+  }, [salesTargets, activeTargetTab, filters.staff_id, filters.customer_id, filters.territory]);
 
   // Add this new useEffect to refetch data when filters change
   useEffect(() => {
@@ -108,41 +109,141 @@ const SalesPerformanceScreen = ({ navigation }) => {
     }
   };
 
-  // Filter targets by active tab
+  // Filter targets by active tab with proper aggregation
   const filterTargetsByTab = () => {
     // Always filter from the original salesTargets data, not from filteredTargets
     let filtered = [];
     
     console.log('Original Sales Targets:', salesTargets);
     console.log('Active Target Tab:', activeTargetTab);
+    console.log('Current Filters:', filters);
+    
+    // First, apply filter-based filtering (staff_id, customer_id from filters)
+    let preFiltered = [...salesTargets];
+    
+    // Apply staff filter if set
+    if (filters.staff_id) {
+      preFiltered = preFiltered.filter(target => target.staff_id == filters.staff_id);
+    }
+    
+    // Apply customer filter if set
+    if (filters.customer_id) {
+      preFiltered = preFiltered.filter(target => target.customer_id == filters.customer_id);
+    }
+    
+    // Apply territory filter if set
+    if (filters.territory) {
+      preFiltered = preFiltered.filter(target => target.territory === filters.territory);
+    }
     
     switch (activeTargetTab) {
       case 'customers':
-        // Show records where customer_id is not null but staff_id is null
-        filtered = salesTargets.filter(target => {
-          const isCustomerOnly = target.customer_id != null && target.staff_id == null;
-          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isCustomerOnly=${isCustomerOnly}`);
-          return isCustomerOnly;
+        // Group by customer_id and aggregate all targets for each customer
+        // This includes both customer-only targets and staff-per-customer targets
+        const customerMap = new Map();
+        
+        preFiltered.forEach(target => {
+          if (target.customer_id != null) {
+            const customerId = target.customer_id;
+            
+            if (!customerMap.has(customerId)) {
+              // Initialize aggregated target for this customer
+              customerMap.set(customerId, {
+                id: `customer_${customerId}`,
+                customer_id: customerId,
+                customer_name: target.customer_name,
+                staff_id: null, // Aggregated, so no specific staff
+                staff_first_name: null,
+                staff_last_name: null,
+                target_sales_amount: 0,
+                target_revenue_amount: 0,
+                target_visit_count: 0,
+                achieved_sales_amount: 0,
+                achieved_revenue_amount: 0,
+                achieved_visit_count: 0,
+                pending_invoice_amount: 0,
+                target_date: target.target_date,
+                target_period: target.target_period,
+                territory: target.territory,
+                set_by_first_name: target.set_by_first_name,
+                set_by_last_name: target.set_by_last_name,
+                created_at: target.created_at,
+              });
+            }
+            
+            // Aggregate values
+            const aggregated = customerMap.get(customerId);
+            aggregated.target_sales_amount = (parseFloat(aggregated.target_sales_amount) || 0) + (parseFloat(target.target_sales_amount) || 0);
+            aggregated.target_revenue_amount = (parseFloat(aggregated.target_revenue_amount) || 0) + (parseFloat(target.target_revenue_amount) || 0);
+            aggregated.target_visit_count = (parseInt(aggregated.target_visit_count) || 0) + (parseInt(target.target_visit_count) || 0);
+            aggregated.achieved_sales_amount = (parseFloat(aggregated.achieved_sales_amount) || 0) + (parseFloat(target.achieved_sales_amount) || 0);
+            aggregated.achieved_revenue_amount = (parseFloat(aggregated.achieved_revenue_amount) || 0) + (parseFloat(target.achieved_revenue_amount) || 0);
+            aggregated.achieved_visit_count = (parseInt(aggregated.achieved_visit_count) || 0) + (parseInt(target.achieved_visit_count) || 0);
+            aggregated.pending_invoice_amount = (parseFloat(aggregated.pending_invoice_amount) || 0) + (parseFloat(target.pending_invoice_amount) || 0);
+          }
         });
+        
+        filtered = Array.from(customerMap.values());
         break;
+        
       case 'staff':
-        // Show records where staff_id is not null but customer_id is null
-        filtered = salesTargets.filter(target => {
-          const isStaffOnly = target.staff_id != null && target.customer_id == null;
-          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isStaffOnly=${isStaffOnly}`);
-          return isStaffOnly;
+        // Group by staff_id and aggregate all targets for each staff
+        // This includes both staff-only targets and staff-per-customer targets
+        const staffMap = new Map();
+        
+        preFiltered.forEach(target => {
+          if (target.staff_id != null) {
+            const staffId = target.staff_id;
+            
+            if (!staffMap.has(staffId)) {
+              // Initialize aggregated target for this staff
+              staffMap.set(staffId, {
+                id: `staff_${staffId}`,
+                staff_id: staffId,
+                staff_first_name: target.staff_first_name,
+                staff_last_name: target.staff_last_name,
+                customer_id: null, // Aggregated, so no specific customer
+                customer_name: null,
+                target_sales_amount: 0,
+                target_revenue_amount: 0,
+                target_visit_count: 0,
+                achieved_sales_amount: 0,
+                achieved_revenue_amount: 0,
+                achieved_visit_count: 0,
+                pending_invoice_amount: 0,
+                target_date: target.target_date,
+                target_period: target.target_period,
+                territory: target.territory,
+                set_by_first_name: target.set_by_first_name,
+                set_by_last_name: target.set_by_last_name,
+                created_at: target.created_at,
+              });
+            }
+            
+            // Aggregate values
+            const aggregated = staffMap.get(staffId);
+            aggregated.target_sales_amount = (parseFloat(aggregated.target_sales_amount) || 0) + (parseFloat(target.target_sales_amount) || 0);
+            aggregated.target_revenue_amount = (parseFloat(aggregated.target_revenue_amount) || 0) + (parseFloat(target.target_revenue_amount) || 0);
+            aggregated.target_visit_count = (parseInt(aggregated.target_visit_count) || 0) + (parseInt(target.target_visit_count) || 0);
+            aggregated.achieved_sales_amount = (parseFloat(aggregated.achieved_sales_amount) || 0) + (parseFloat(target.achieved_sales_amount) || 0);
+            aggregated.achieved_revenue_amount = (parseFloat(aggregated.achieved_revenue_amount) || 0) + (parseFloat(target.achieved_revenue_amount) || 0);
+            aggregated.achieved_visit_count = (parseInt(aggregated.achieved_visit_count) || 0) + (parseInt(target.achieved_visit_count) || 0);
+            aggregated.pending_invoice_amount = (parseFloat(aggregated.pending_invoice_amount) || 0) + (parseFloat(target.pending_invoice_amount) || 0);
+          }
         });
+        
+        filtered = Array.from(staffMap.values());
         break;
+        
       case 'staffPerCustomer':
-        // Show records where both customer_id and staff_id are not null
-        filtered = salesTargets.filter(target => {
-          const isBoth = target.customer_id != null && target.staff_id != null;
-          console.log(`Target ${target.id}: customer_id=${target.customer_id}, staff_id=${target.staff_id}, isBoth=${isBoth}`);
-          return isBoth;
+        // Show records where both customer_id and staff_id are not null (individual combinations)
+        filtered = preFiltered.filter(target => {
+          return target.customer_id != null && target.staff_id != null;
         });
         break;
+        
       default:
-        filtered = salesTargets;
+        filtered = preFiltered;
     }
     
     console.log('Filtered Results:', filtered);
@@ -162,16 +263,22 @@ const SalesPerformanceScreen = ({ navigation }) => {
         period: filters.period, // Updated format: YYYY-MM
       };
 
-      // Add optional filters
-      if (filters.staff_id) {
+      // Only add filters if they are explicitly set (not null)
+      // When filters are null, API should return aggregated data for all
+      // No staff and no customer selected → all customers against all staff
+      // Staff selected, customer not selected → all customers against that staff
+      // Staff not selected, customer selected → that customer against all staff
+      if (filters.staff_id != null && filters.staff_id !== '') {
         payload.staff_id = filters.staff_id;
       }
-      if (filters.customer_id) {
+      if (filters.customer_id != null && filters.customer_id !== '') {
         payload.customer_id = filters.customer_id;
       }
-      if (filters.territory) {
+      if (filters.territory != null && filters.territory !== '') {
         payload.territory = filters.territory;
       }
+
+      console.log('Fetching performance data with payload:', payload);
 
       const response = await fetch(`${API_BASE_URL}/getPerformance`, {
         method: 'POST',
@@ -209,16 +316,20 @@ const SalesPerformanceScreen = ({ navigation }) => {
         target_date: filters.period, // Updated format: YYYY-MM
       };
 
-      // Add optional filters
-      if (filters.staff_id) {
+      // Only add filters if they are explicitly set (not null)
+      // When filters are null, API should return all data
+      // This allows proper aggregation in the frontend
+      if (filters.staff_id != null && filters.staff_id !== '') {
         payload.staff_id = filters.staff_id;
       }
-      if (filters.customer_id) {
+      if (filters.customer_id != null && filters.customer_id !== '') {
         payload.customer_id = filters.customer_id;
       }
-      if (filters.territory) {
+      if (filters.territory != null && filters.territory !== '') {
         payload.territory = filters.territory;
       }
+
+      console.log('Fetching sales targets with payload:', payload);
 
       const response = await fetch(`${API_BASE_URL}/get_sales_targets`, {
         method: 'POST',
@@ -233,6 +344,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
       console.log('Sales Targets API Response:', result);
       
       if (result.status === 200) {
+        // Set all targets - filtering and aggregation will be done in filterTargetsByTab
         setSalesTargets(result.data || []);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchTargets'));
@@ -424,6 +536,155 @@ const SalesPerformanceScreen = ({ navigation }) => {
     </View>
   );
 
+  // Calculate aggregated dashboard stats from salesTargets
+  const calculateDashboardStats = () => {
+    // Apply filters first
+    let preFiltered = [...salesTargets];
+    
+    if (filters.staff_id) {
+      preFiltered = preFiltered.filter(target => target.staff_id == filters.staff_id);
+    }
+    if (filters.customer_id) {
+      preFiltered = preFiltered.filter(target => target.customer_id == filters.customer_id);
+    }
+    if (filters.territory) {
+      preFiltered = preFiltered.filter(target => target.territory === filters.territory);
+    }
+    
+    // Aggregate all targets
+    const stats = {
+      revenue: {
+        target: 0,
+        achieved: 0,
+        remaining: 0,
+        percentage: 0,
+      },
+      sales: {
+        target: 0,
+        achieved: 0,
+        remaining: 0,
+        percentage: 0,
+      },
+      visits: {
+        target: 0,
+        achieved: 0,
+        remaining: 0,
+        percentage: 0,
+      },
+    };
+    
+    preFiltered.forEach(target => {
+      // Revenue stats
+      const targetRevenue = parseFloat(target.target_revenue_amount) || 0;
+      const achievedRevenue = parseFloat(target.achieved_revenue_amount) || 0;
+      stats.revenue.target += targetRevenue;
+      stats.revenue.achieved += achievedRevenue;
+      
+      // Sales stats
+      const targetSales = parseFloat(target.target_sales_amount) || 0;
+      const achievedSales = parseFloat(target.achieved_sales_amount) || 0;
+      stats.sales.target += targetSales;
+      stats.sales.achieved += achievedSales;
+      
+      // Visits stats
+      const targetVisits = parseInt(target.target_visit_count) || 0;
+      const achievedVisits = parseInt(target.achieved_visit_count) || 0;
+      stats.visits.target += targetVisits;
+      stats.visits.achieved += achievedVisits;
+    });
+    
+    // Calculate remaining and percentages
+    stats.revenue.remaining = Math.max(0, stats.revenue.target - stats.revenue.achieved);
+    stats.revenue.percentage = stats.revenue.target > 0 ? (stats.revenue.achieved / stats.revenue.target) * 100 : 0;
+    
+    stats.sales.remaining = Math.max(0, stats.sales.target - stats.sales.achieved);
+    stats.sales.percentage = stats.sales.target > 0 ? (stats.sales.achieved / stats.sales.target) * 100 : 0;
+    
+    stats.visits.remaining = Math.max(0, stats.visits.target - stats.visits.achieved);
+    stats.visits.percentage = stats.visits.target > 0 ? (stats.visits.achieved / stats.visits.target) * 100 : 0;
+    
+    return stats;
+  };
+
+  // Get status based on percentage
+  const getStatusFromPercentage = (percentage) => {
+    if (percentage >= 100) return 'ahead';
+    if (percentage >= 80) return 'on_track';
+    return 'behind';
+  };
+
+  // Render dashboard sub-tabs
+  const renderDashboardSubTabs = () => {
+    if (activeTab !== 'dashboard') return null;
+
+    return (
+      <View style={styles.subTabContainer}>
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeDashboardTab === 'revenue' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveDashboardTab('revenue')}
+        >
+          <Ionicons 
+            name="cash" 
+            size={14} 
+            color={activeDashboardTab === 'revenue' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeDashboardTab === 'revenue' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('revenue')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeDashboardTab === 'sales' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveDashboardTab('sales')}
+        >
+          <Ionicons 
+            name="trending-up" 
+            size={14} 
+            color={activeDashboardTab === 'sales' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeDashboardTab === 'sales' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('sales')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.subTabButton,
+            activeDashboardTab === 'visits' && styles.subTabButtonActive
+          ]}
+          onPress={() => setActiveDashboardTab('visits')}
+        >
+          <Ionicons 
+            name="walk" 
+            size={14} 
+            color={activeDashboardTab === 'visits' ? "#fff" : "#6B7D3D"} 
+          />
+          <Text style={[
+            styles.subTabButtonText,
+            activeDashboardTab === 'visits' && styles.subTabButtonTextActive,
+            isRTL && commonStyles.arabicText
+          ]}>
+            {translate('visits')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   // Render target sub-tabs
   const renderTargetSubTabs = () => {
     if (activeTab !== 'targets') return null;
@@ -498,7 +759,52 @@ const SalesPerformanceScreen = ({ navigation }) => {
 
   // Render main performance overview
   const renderPerformanceOverview = () => {
-    if (!performanceData) {
+    // Calculate aggregated stats from salesTargets
+    const dashboardStats = calculateDashboardStats();
+    
+    // Get current tab stats
+    let currentStats;
+    let statLabel;
+    let statIcon;
+    
+    switch (activeDashboardTab) {
+      case 'revenue':
+        currentStats = dashboardStats.revenue;
+        statLabel = translate('revenue');
+        statIcon = 'cash';
+        break;
+      case 'sales':
+        currentStats = dashboardStats.sales;
+        statLabel = translate('sales');
+        statIcon = 'trending-up';
+        break;
+      case 'visits':
+        currentStats = dashboardStats.visits;
+        statLabel = translate('visits');
+        statIcon = 'walk';
+        break;
+      default:
+        currentStats = dashboardStats.revenue;
+        statLabel = translate('revenue');
+        statIcon = 'cash';
+    }
+    
+    const targetAmount = currentStats.target;
+    const achievedAmount = currentStats.achieved;
+    const remainingAmount = currentStats.remaining;
+    const achievementPercentage = currentStats.percentage;
+    const status = getStatusFromPercentage(achievementPercentage);
+    
+    // Calculate days left in period
+    const periodDate = new Date(filters.period + '-01');
+    const lastDayOfMonth = new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 0);
+    const today = new Date();
+    const daysLeft = Math.max(0, Math.ceil((lastDayOfMonth - today) / (1000 * 60 * 60 * 24)));
+    
+    // Calculate daily target needed
+    const dailyTargetNeeded = daysLeft > 0 ? remainingAmount / daysLeft : 0;
+    
+    if (salesTargets.length === 0) {
       return (
         <View style={commonStyles.emptyContainer}>
           <Ionicons name="analytics-outline" size={64} color="#ccc" />
@@ -512,17 +818,6 @@ const SalesPerformanceScreen = ({ navigation }) => {
       );
     }
 
-    const {
-      target_amount,
-      achieved_amount,
-      achievement_percentage,
-      remaining_amount,
-      days_left_in_period,
-      daily_target_needed,
-      status,
-      comparison_with_last_period
-    } = performanceData;
-
     return (
       <View style={styles.dashboardContainer}>
         {/* Status Overview Card */}
@@ -530,7 +825,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
           <View style={[styles.statusHeader, isRTL && styles.rtlStatusHeader]}>
             <View style={styles.statusInfo}>
               <Text style={[styles.statusTitle, isRTL && commonStyles.arabicText]}>
-                {translate('performanceStatus')}
+                {statLabel} {translate('performanceStatus')}
               </Text>
               <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(status)}20` }]}>
                 <Ionicons name={getStatusIcon(status)} size={16} color={getStatusColor(status)} />
@@ -540,16 +835,19 @@ const SalesPerformanceScreen = ({ navigation }) => {
               </View>
             </View>
             <Text style={[styles.achievementPercentage, { color: getStatusColor(status) }, isRTL && commonStyles.arabicText]}>
-              {achievement_percentage?.toFixed(1)}%
+              {achievementPercentage.toFixed(1)}%
             </Text>
           </View>
         </View>
 
         {/* Progress Chart - Custom Implementation */}
         <View style={styles.chartCard}>
-          <Text style={[styles.chartTitle, isRTL && commonStyles.arabicText]}>
-            {translate('targetProgress')}
-          </Text>
+          <View style={[styles.chartTitleContainer, isRTL && styles.rtlChartTitleContainer]}>
+            <Ionicons name={statIcon} size={20} color="#6B7D3D" />
+            <Text style={[styles.chartTitle, isRTL && commonStyles.arabicText]}>
+              {statLabel} {translate('targetProgress')}
+            </Text>
+          </View>
           <View style={styles.customProgressContainer}>
             {/* Custom Circular Progress */}
             <View style={styles.circularProgressWrapper}>
@@ -559,7 +857,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
                     styles.circularProgressFill,
                     {
                       transform: [
-                        { rotate: `${(achievement_percentage * 3.6) - 90}deg` }
+                        { rotate: `${(achievementPercentage * 3.6) - 90}deg` }
                       ]
                     }
                   ]}
@@ -567,7 +865,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
               </View>
               <View style={styles.circularProgressInner}>
                 <Text style={[styles.progressPercentageText, isRTL && commonStyles.arabicText]}>
-                  {achievement_percentage?.toFixed(1)}%
+                  {achievementPercentage.toFixed(1)}%
                 </Text>
                 <Text style={[styles.progressLabel, isRTL && commonStyles.arabicText]}>
                   {translate('achieved')}
@@ -580,13 +878,13 @@ const SalesPerformanceScreen = ({ navigation }) => {
               <View style={[styles.progressDetailItem, isRTL && styles.rtlProgressDetail]}>
                 <View style={[styles.progressIndicator, { backgroundColor: '#27AE60' }]} />
                 <Text style={[styles.progressDetailLabel, isRTL && commonStyles.arabicText]}>
-                  {translate('achieved')}: {parseFloat(achieved_amount).toLocaleString()}
+                  {translate('achieved')}: {achievedAmount.toLocaleString()}
                 </Text>
               </View>
               <View style={[styles.progressDetailItem, isRTL && styles.rtlProgressDetail]}>
                 <View style={[styles.progressIndicator, { backgroundColor: '#E74C3C' }]} />
                 <Text style={[styles.progressDetailLabel, isRTL && commonStyles.arabicText]}>
-                  {translate('remaining')}: {remaining_amount?.toLocaleString()}
+                  {translate('remaining')}: {remainingAmount.toLocaleString()}
                 </Text>
               </View>
             </View>
@@ -599,10 +897,10 @@ const SalesPerformanceScreen = ({ navigation }) => {
           <View style={[styles.metricCard, { backgroundColor: 'rgba(52, 152, 219, 0.1)' }]}>
             <Ionicons name="flag-outline" size={24} color="#3498DB" />
             <Text style={[styles.metricValue, { color: '#3498DB' }, isRTL && commonStyles.arabicText]}>
-              {parseFloat(target_amount).toLocaleString()}
+              {targetAmount.toLocaleString()}
             </Text>
             <Text style={[styles.metricLabel, isRTL && commonStyles.arabicText]}>
-              {translate('targetAmount')}
+              {statLabel} {translate('targetAmount')}
             </Text>
           </View>
 
@@ -610,10 +908,10 @@ const SalesPerformanceScreen = ({ navigation }) => {
           <View style={[styles.metricCard, { backgroundColor: 'rgba(39, 174, 96, 0.1)' }]}>
             <Ionicons name="checkmark-circle-outline" size={24} color="#27AE60" />
             <Text style={[styles.metricValue, { color: '#27AE60' }, isRTL && commonStyles.arabicText]}>
-              {parseFloat(achieved_amount).toLocaleString()}
+              {achievedAmount.toLocaleString()}
             </Text>
             <Text style={[styles.metricLabel, isRTL && commonStyles.arabicText]}>
-              {translate('achievedAmount')}
+              {statLabel} {translate('achievedAmount')}
             </Text>
           </View>
 
@@ -621,10 +919,10 @@ const SalesPerformanceScreen = ({ navigation }) => {
           <View style={[styles.metricCard, { backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
             <Ionicons name="hourglass-outline" size={24} color="#E74C3C" />
             <Text style={[styles.metricValue, { color: '#E74C3C' }, isRTL && commonStyles.arabicText]}>
-              {remaining_amount?.toLocaleString()}
+              {remainingAmount.toLocaleString()}
             </Text>
             <Text style={[styles.metricLabel, isRTL && commonStyles.arabicText]}>
-              {translate('remainingAmount')}
+              {statLabel} {translate('remainingAmount')}
             </Text>
           </View>
 
@@ -632,7 +930,7 @@ const SalesPerformanceScreen = ({ navigation }) => {
           <View style={[styles.metricCard, { backgroundColor: 'rgba(243, 156, 18, 0.1)' }]}>
             <Ionicons name="time-outline" size={24} color="#F39C12" />
             <Text style={[styles.metricValue, { color: '#F39C12' }, isRTL && commonStyles.arabicText]}>
-              {Math.ceil(days_left_in_period)}
+              {daysLeft}
             </Text>
             <Text style={[styles.metricLabel, isRTL && commonStyles.arabicText]}>
               {translate('daysLeft')}
@@ -646,37 +944,14 @@ const SalesPerformanceScreen = ({ navigation }) => {
             <Ionicons name="trending-up" size={24} color="#6B7D3D" />
             <View style={styles.dailyTargetInfo}>
               <Text style={[styles.dailyTargetTitle, isRTL && commonStyles.arabicText]}>
-                {translate('dailyTargetNeeded')}
+                {statLabel} {translate('dailyTargetNeeded')}
               </Text>
               <Text style={[styles.dailyTargetValue, isRTL && commonStyles.arabicText]}>
-                {daily_target_needed?.toLocaleString()} / {translate('day')}
+                {dailyTargetNeeded.toFixed(2).toLocaleString()} / {translate('day')}
               </Text>
             </View>
           </View>
         </View>
-
-        {/* Comparison with Last Period */}
-        {comparison_with_last_period !== 0 && (
-          <View style={styles.comparisonCard}>
-            <View style={[styles.comparisonHeader, isRTL && styles.rtlComparisonHeader]}>
-              <Ionicons 
-                name={comparison_with_last_period > 0 ? "trending-up" : "trending-down"} 
-                size={20} 
-                color={comparison_with_last_period > 0 ? "#27AE60" : "#E74C3C"} 
-              />
-              <Text style={[styles.comparisonText, isRTL && commonStyles.arabicText]}>
-                {translate('comparisonWithLastPeriod')}
-              </Text>
-              <Text style={[
-                styles.comparisonValue, 
-                { color: comparison_with_last_period > 0 ? "#27AE60" : "#E74C3C" },
-                isRTL && commonStyles.arabicText
-              ]}>
-                {comparison_with_last_period > 0 ? '+' : ''}{comparison_with_last_period}%
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* Achievement Breakdown - Custom Implementation */}
         <View style={styles.chartCard}>
@@ -688,60 +963,60 @@ const SalesPerformanceScreen = ({ navigation }) => {
             <View style={styles.barChartContainer}>
               <View style={styles.barChart}>
                 <View style={styles.barBackground}>
-                  <View 
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${achievement_percentage}%`,
-                        backgroundColor: getStatusColor(status)
-                      }
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.barChartLabel, isRTL && commonStyles.arabicText]}>
-                  {achievement_percentage?.toFixed(1)}% {translate('achieved')}
+                <View 
+                  style={[
+                    styles.barFill,
+                    {
+                      width: `${achievementPercentage}%`,
+                      backgroundColor: getStatusColor(status)
+                    }
+                  ]}
+                />
+              </View>
+              <Text style={[styles.barChartLabel, isRTL && commonStyles.arabicText]}>
+                {achievementPercentage.toFixed(1)}% {translate('achieved')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Achievement Stats */}
+          <View style={styles.achievementStats}>
+            <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
+              <View style={[styles.statIndicator, { backgroundColor: '#27AE60' }]} />
+              <View style={styles.statInfo}>
+                <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
+                  {achievedAmount.toLocaleString()}
+                </Text>
+                <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
+                  {statLabel} {translate('achieved')}
                 </Text>
               </View>
             </View>
 
-            {/* Achievement Stats */}
-            <View style={styles.achievementStats}>
-              <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
-                <View style={[styles.statIndicator, { backgroundColor: '#27AE60' }]} />
-                <View style={styles.statInfo}>
-                  <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
-                    {parseFloat(achieved_amount).toLocaleString()}
-                  </Text>
-                  <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
-                    {translate('achieved')}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
-                <View style={[styles.statIndicator, { backgroundColor: '#E74C3C' }]} />
-                <View style={styles.statInfo}>
-                  <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
-                    {remaining_amount?.toLocaleString()}
-                  </Text>
-                  <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
-                    {translate('remaining')}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
-                <View style={[styles.statIndicator, { backgroundColor: '#3498DB' }]} />
-                <View style={styles.statInfo}>
-                  <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
-                    {parseFloat(target_amount).toLocaleString()}
-                  </Text>
-                  <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
-                    {translate('targetAmount')}
-                  </Text>
-                </View>
+            <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
+              <View style={[styles.statIndicator, { backgroundColor: '#E74C3C' }]} />
+              <View style={styles.statInfo}>
+                <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
+                  {remainingAmount.toLocaleString()}
+                </Text>
+                <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
+                  {statLabel} {translate('remaining')}
+                </Text>
               </View>
             </View>
+
+            <View style={[styles.achievementStatItem, isRTL && styles.rtlAchievementStat]}>
+              <View style={[styles.statIndicator, { backgroundColor: '#3498DB' }]} />
+              <View style={styles.statInfo}>
+                <Text style={[styles.statValue, isRTL && commonStyles.arabicText]}>
+                  {targetAmount.toLocaleString()}
+                </Text>
+                <Text style={[styles.statLabel, isRTL && commonStyles.arabicText]}>
+                  {statLabel} {translate('targetAmount')}
+                </Text>
+              </View>
+            </View>
+          </View>
           </View>
         </View>
       </View>
@@ -1065,6 +1340,9 @@ const renderTargetItem = ({ item }) => {
         {/* Tab Selector */}
         {renderTabSelector()}
 
+        {/* Dashboard Sub-tabs */}
+        {renderDashboardSubTabs()}
+
         {/* Target Sub-tabs */}
         {renderTargetSubTabs()}
 
@@ -1292,11 +1570,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
+  chartTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 15,
+  },
+  rtlChartTitleContainer: {
+    flexDirection: 'row-reverse',
+  },
   chartTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 15,
     textAlign: 'center',
   },
 

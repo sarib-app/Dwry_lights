@@ -25,11 +25,14 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
   const [purchaseInvoices, setPurchaseInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -89,16 +92,23 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
     }
   };
 
-  // Fetch all purchase invoices
-  const fetchPurchaseInvoices = async () => {
+  // Fetch all purchase invoices with pagination
+  const fetchPurchaseInvoices = async (page = 1, append = false) => {
     try {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
       const token = await getAuthToken();
       if (!token) {
         Alert.alert(translate('error'), translate('authTokenNotFound'));
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/fetch_all_purchase_invoices`, {
+      const response = await fetch(`${API_BASE_URL}/fetch_all_purchase_invoices?page=${page}`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -109,7 +119,27 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
       console.log('Purchase Invoices API Response:', result);
       
       if (result.status === 200 || result.status === '200') {
-        setPurchaseInvoices(result.data || []);
+        const newInvoices = result?.data || [];
+        
+        if (append) {
+          setPurchaseInvoices(prev => [...prev, ...newInvoices]);
+        } else {
+          setPurchaseInvoices(newInvoices);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newInvoices) && newInvoices.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newInvoices.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchPurchaseInvoices'));
       }
@@ -119,6 +149,15 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more purchase invoices
+  const loadMorePurchaseInvoices = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchPurchaseInvoices(nextPage, true);
     }
   };
 
@@ -154,7 +193,10 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
               
               if (result.status === 200 || result.status === '200') {
                 Alert.alert(translate('success'), translate('purchaseInvoiceDeletedSuccessfully'));
-                fetchPurchaseInvoices(); // Refresh the list
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchPurchaseInvoices(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToDeletePurchaseInvoice'));
               }
@@ -179,7 +221,9 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchPurchaseInvoices();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchPurchaseInvoices(1, false);
   }, []);
 
   // Calculate totals for display
@@ -532,9 +576,33 @@ const PurchaseInvoiceListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMorePurchaseInvoices();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredInvoices.length > 0 ? (
-          filteredInvoices.map(renderInvoiceCard)
+          <>
+            {filteredInvoices.map(renderInvoiceCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more invoices...</Text>
+              </View>
+            )}
+            {!hasMoreData && purchaseInvoices.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more invoices to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={64} color="#ccc" />
@@ -982,6 +1050,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

@@ -27,6 +27,7 @@ const ExpenseListScreen = ({ navigation }) => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -36,6 +37,8 @@ const ExpenseListScreen = ({ navigation }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -84,16 +87,23 @@ const ExpenseListScreen = ({ navigation }) => {
   const canDeleteExpenses = () => hasExpensePermission('delete');
   const canViewExpenses = () => hasExpensePermission('view') || hasExpensePermission('management');
 
-  // Fetch all expenses
-  const fetchExpenses = async () => {
-    const token = await getAuthToken();
-    if (!token) {
-      Alert.alert(translate('error'), translate('authTokenNotFound'));
-      return;
-    }
-
+  // Fetch all expenses with pagination
+  const fetchExpenses = async (page = 1, append = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_expenses`, {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const token = await getAuthToken();
+      if (!token) {
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/fetch_all_expenses?page=${page}`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -104,7 +114,27 @@ const ExpenseListScreen = ({ navigation }) => {
       console.log('Expenses API Response:', result);
       
       if (result.status == 200) {
-        setExpenses(result.data || []);
+        const newExpenses = result?.data || [];
+        
+        if (append) {
+          setExpenses(prev => [...prev, ...newExpenses]);
+        } else {
+          setExpenses(newExpenses);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newExpenses) && newExpenses.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newExpenses.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchExpenses'));
       }
@@ -114,6 +144,15 @@ const ExpenseListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more expenses
+  const loadMoreExpenses = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchExpenses(nextPage, true);
     }
   };
 
@@ -149,7 +188,10 @@ const ExpenseListScreen = ({ navigation }) => {
               
               if (result.status == 200) {
                 Alert.alert(translate('success'), translate('expenseDeletedSuccessfully'));
-                fetchExpenses();
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchExpenses(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToDeleteExpense'));
               }
@@ -180,7 +222,9 @@ const ExpenseListScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchExpenses();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchExpenses(1, false);
   }, []);
 
   // Calculate statistics
@@ -545,9 +589,33 @@ const ExpenseListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMoreExpenses();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredExpenses.length > 0 ? (
-          filteredExpenses.map(renderExpenseCard)
+          <>
+            {filteredExpenses.map(renderExpenseCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more expenses...</Text>
+              </View>
+            )}
+            {!hasMoreData && expenses.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more expenses to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={64} color="#ccc" />
@@ -1173,6 +1241,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

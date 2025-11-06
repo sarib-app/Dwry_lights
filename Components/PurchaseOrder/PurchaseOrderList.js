@@ -29,6 +29,7 @@ const PurchaseOrderListScreen = ({ navigation }) => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -36,6 +37,8 @@ const PurchaseOrderListScreen = ({ navigation }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -84,16 +87,23 @@ const PurchaseOrderListScreen = ({ navigation }) => {
   const canDeletePurchaseOrders = () => hasPurchaseOrderPermission('delete');
   const canViewPurchaseOrders = () => hasPurchaseOrderPermission('view') || hasPurchaseOrderPermission('management');
 
-  // Fetch all purchase orders
-  const fetchPurchaseOrders = async () => {
-    const token = await getAuthToken();
-    if (!token) {
-      Alert.alert(translate('error'), translate('authTokenNotFound'));
-      return;
-    }
-
+  // Fetch all purchase orders with pagination
+  const fetchPurchaseOrders = async (page = 1, append = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_purchase_orders`, {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const token = await getAuthToken();
+      if (!token) {
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/fetch_all_purchase_orders?page=${page}`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -104,7 +114,27 @@ const PurchaseOrderListScreen = ({ navigation }) => {
       console.log('Purchase Orders API Response:', result);
       
       if (result.status == 200) {
-        setPurchaseOrders(result.data || []);
+        const newOrders = result?.data || [];
+        
+        if (append) {
+          setPurchaseOrders(prev => [...prev, ...newOrders]);
+        } else {
+          setPurchaseOrders(newOrders);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newOrders) && newOrders.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newOrders.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchPurchaseOrders'));
       }
@@ -114,6 +144,15 @@ const PurchaseOrderListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more purchase orders
+  const loadMorePurchaseOrders = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchPurchaseOrders(nextPage, true);
     }
   };
 
@@ -149,7 +188,10 @@ const PurchaseOrderListScreen = ({ navigation }) => {
               
               if (result.status == 200) {
                 Alert.alert(translate('success'), translate('purchaseOrderDeletedSuccessfully'));
-                fetchPurchaseOrders();
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchPurchaseOrders(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToDeletePurchaseOrder'));
               }
@@ -179,7 +221,9 @@ const PurchaseOrderListScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchPurchaseOrders();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchPurchaseOrders(1, false);
   }, []);
 
   // Calculate statistics
@@ -485,9 +529,33 @@ const PurchaseOrderListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMorePurchaseOrders();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredPurchaseOrders.length > 0 ? (
-          filteredPurchaseOrders.map(renderPurchaseOrderCard)
+          <>
+            {filteredPurchaseOrders.map(renderPurchaseOrderCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more orders...</Text>
+              </View>
+            )}
+            {!hasMoreData && purchaseOrders.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more orders to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={commonStyles.emptyContainer}>
             <Ionicons name="document-text-outline" size={64} color="#ccc" />
@@ -729,6 +797,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

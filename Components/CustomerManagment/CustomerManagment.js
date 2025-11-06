@@ -25,6 +25,7 @@ const CustomerManagementScreen = ({ navigation }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreData, setHasMoreData] = useState(true);
@@ -90,6 +91,13 @@ const CustomerManagementScreen = ({ navigation }) => {
   // Fetch all customers with pagination
   const fetchCustomers = async (page = 1, append = false) => {
     try {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
       const token = await getAuthToken();
       if (!token) {
         Alert.alert('Error', 'Authentication token not found');
@@ -108,14 +116,36 @@ const CustomerManagementScreen = ({ navigation }) => {
       
       if (result.status == 200) {
         const newCustomers = result?.data || [];
+        
         if (append) {
           setCustomers(prev => [...prev, ...newCustomers]);
         } else {
           setCustomers(newCustomers);
         }
         
-        // Check if there's more data
-        setHasMoreData(result.data?.next_page_url != null);
+        // Check if there's more data based on pagination response
+        // Laravel pagination typically has next_page_url, last_page, or current_page < last_page
+        let hasNextPage = false;
+        
+        // Check for next_page_url (most reliable indicator)
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        }
+        // Check if current_page < last_page
+        else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        }
+        // Fallback: if we got a full page of data, assume there might be more
+        // This is less reliable but works if API doesn't provide pagination metadata
+        else if (Array.isArray(newCustomers) && newCustomers.length > 0) {
+          const perPage = result.per_page || 10;
+          // Only assume more data if we got exactly per_page items (suggests there might be more)
+          // If we got less, we're likely on the last page
+          hasNextPage = newCustomers.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert('Error', result.message || 'Failed to fetch customers');
       }
@@ -125,14 +155,14 @@ const CustomerManagementScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
   // Load more customers
   const loadMoreCustomers = () => {
-    if (hasMoreData && !loading) {
+    if (hasMoreData && !loading && !loadingMore) {
       const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
       fetchCustomers(nextPage, true);
     }
   };
@@ -169,7 +199,10 @@ const CustomerManagementScreen = ({ navigation }) => {
               
               if (result.status == 200) {
                 Alert.alert('Success', 'Customer deleted successfully');
-                fetchCustomers(); // Refresh the list
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchCustomers(1, false);
               } else {
                 Alert.alert('Error', result.message || 'Failed to delete customer');
               }
@@ -213,7 +246,8 @@ const CustomerManagementScreen = ({ navigation }) => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setCurrentPage(1);
-    fetchCustomers(1);
+    setHasMoreData(true);
+    fetchCustomers(1, false);
   }, []);
 
   // Calculate stats
@@ -441,8 +475,9 @@ const CustomerManagementScreen = ({ navigation }) => {
         }
         onScroll={({ nativeEvent }) => {
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-          if (isCloseToBottom && hasMoreData && !loading) {
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
             loadMoreCustomers();
           }
         }}
@@ -453,10 +488,15 @@ const CustomerManagementScreen = ({ navigation }) => {
             {filteredCustomers.map(renderCustomerCard)}
             
             {/* Load More Indicator */}
-            {hasMoreData && (
+            {loadingMore && (
               <View style={styles.loadMoreContainer}>
                 <ActivityIndicator size="small" color="#6B7D3D" />
                 <Text style={styles.loadMoreText}>Loading more customers...</Text>
+              </View>
+            )}
+            {!hasMoreData && customers.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more customers to load</Text>
               </View>
             )}
           </>

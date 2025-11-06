@@ -26,6 +26,7 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
   const [returnInvoices, setReturnInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -33,6 +34,8 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -69,8 +72,15 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
   const canViewReturnInvoices = () => hasReturnInvoicePermission('view') || hasReturnInvoicePermission('management');
   const canApproveReturnInvoices = () => hasReturnInvoicePermission('approve') || hasReturnInvoicePermission('management');
 
-  const fetchReturnInvoices = async () => {
+  const fetchReturnInvoices = async (page = 1, append = false) => {
     try {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
       const token = await getAuthToken();
       if (!token) {
         Alert.alert(translate('error'), translate('authTokenNotFound'));
@@ -81,10 +91,11 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
         customer_id: null,
         date_from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
         date_to: new Date().toISOString().split('T')[0],
-        status: filterStatus === 'all' ? null : filterStatus
+        status: filterStatus === 'all' ? null : filterStatus,
+        page: page
       };
 
-      const response = await fetch(`${API_BASE_URL}/get_return_invoices`, {
+      const response = await fetch(`${API_BASE_URL}/get_return_invoices?page=${page}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -95,7 +106,27 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
       
       const result = await response.json();
       if (result.status === 200) {
-        setReturnInvoices(result.data || []);
+        const newInvoices = result?.data || [];
+        
+        if (append) {
+          setReturnInvoices(prev => [...prev, ...newInvoices]);
+        } else {
+          setReturnInvoices(newInvoices);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newInvoices) && newInvoices.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newInvoices.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchReturnInvoices'));
       }
@@ -105,6 +136,15 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more return invoices
+  const loadMoreReturnInvoices = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchReturnInvoices(nextPage, true);
     }
   };
 
@@ -136,7 +176,10 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
               const result = await response.json();
               if (result.status == 200) {
                 Alert.alert(translate('success'), translate('returnInvoiceApprovedSuccessfully'));
-                fetchReturnInvoices();
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchReturnInvoices(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToApproveReturnInvoice'));
               }
@@ -161,7 +204,9 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchReturnInvoices();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchReturnInvoices(1, false);
   }, [filterStatus]);
 
   const calculateStats = () => {
@@ -502,9 +547,33 @@ const ReturnInvoiceListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMoreReturnInvoices();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredReturnInvoices.length > 0 ? (
-          filteredReturnInvoices.map(renderReturnInvoiceCard)
+          <>
+            {filteredReturnInvoices.map(renderReturnInvoiceCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more invoices...</Text>
+              </View>
+            )}
+            {!hasMoreData && returnInvoices.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more invoices to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={commonStyles.emptyContainer}>
             <Ionicons name="receipt-outline" size={64} color="#ccc" />
@@ -799,6 +868,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

@@ -28,6 +28,7 @@ const PaymentEntryListScreen = ({ navigation }) => {
   const [paymentEntries, setPaymentEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -35,6 +36,8 @@ const PaymentEntryListScreen = ({ navigation }) => {
   const [isRTL, setIsRTL] = useState(false);
   const [roleId, setRoleId] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   const translate = (key) => languageService.translate(key);
 
@@ -83,16 +86,23 @@ const PaymentEntryListScreen = ({ navigation }) => {
   const canDeletePayments = () => hasPaymentPermission('delete');
   const canViewPayments = () => hasPaymentPermission('view') || hasPaymentPermission('management');
 
-  // Fetch all payment entries
-  const fetchPaymentEntries = async () => {
-    const token = await getAuthToken();
-    if (!token) {
-      Alert.alert(translate('error'), translate('authTokenNotFound'));
-      return;
-    }
-
+  // Fetch all payment entries with pagination
+  const fetchPaymentEntries = async (page = 1, append = false) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/fetch_all_payment_entries`, {
+      // Set loading state
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const token = await getAuthToken();
+      if (!token) {
+        Alert.alert(translate('error'), translate('authTokenNotFound'));
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/fetch_all_payment_entries?page=${page}`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -103,7 +113,27 @@ const PaymentEntryListScreen = ({ navigation }) => {
       console.log('Payment Entries API Response:', result);
       
       if (result.status == 200) {
-        setPaymentEntries(result.data || []);
+        const newEntries = result?.data || [];
+        
+        if (append) {
+          setPaymentEntries(prev => [...prev, ...newEntries]);
+        } else {
+          setPaymentEntries(newEntries);
+        }
+        
+        // Check if there's more data based on pagination response
+        let hasNextPage = false;
+        if (result.next_page_url != null) {
+          hasNextPage = true;
+        } else if (result.current_page != null && result.last_page != null) {
+          hasNextPage = result.current_page < result.last_page;
+        } else if (Array.isArray(newEntries) && newEntries.length > 0) {
+          const perPage = result.per_page || 10;
+          hasNextPage = newEntries.length === perPage;
+        }
+        
+        setHasMoreData(hasNextPage);
+        setCurrentPage(page);
       } else {
         Alert.alert(translate('error'), result.message || translate('failedToFetchPaymentEntries'));
       }
@@ -113,6 +143,15 @@ const PaymentEntryListScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more payment entries
+  const loadMorePaymentEntries = () => {
+    if (hasMoreData && !loading && !loadingMore) {
+      const nextPage = currentPage + 1;
+      fetchPaymentEntries(nextPage, true);
     }
   };
 
@@ -148,7 +187,10 @@ const PaymentEntryListScreen = ({ navigation }) => {
               
               if (result.status == 200) {
                 Alert.alert(translate('success'), translate('paymentEntryDeletedSuccessfully'));
-                fetchPaymentEntries();
+                // Reset to first page and refresh
+                setCurrentPage(1);
+                setHasMoreData(true);
+                fetchPaymentEntries(1, false);
               } else {
                 Alert.alert(translate('error'), result.message || translate('failedToDeletePaymentEntry'));
               }
@@ -179,7 +221,9 @@ const PaymentEntryListScreen = ({ navigation }) => {
   // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchPaymentEntries();
+    setCurrentPage(1);
+    setHasMoreData(true);
+    fetchPaymentEntries(1, false);
   }, []);
 
   // Calculate statistics
@@ -529,9 +573,33 @@ const PaymentEntryListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7D3D']} />
         }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+          if (isCloseToBottom && hasMoreData && !loading && !loadingMore) {
+            loadMorePaymentEntries();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {filteredPaymentEntries.length > 0 ? (
-          filteredPaymentEntries.map(renderPaymentEntryCard)
+          <>
+            {filteredPaymentEntries.map(renderPaymentEntryCard)}
+            
+            {/* Load More Indicator */}
+            {loadingMore && (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color="#6B7D3D" />
+                <Text style={styles.loadMoreText}>Loading more entries...</Text>
+              </View>
+            )}
+            {!hasMoreData && paymentEntries.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <Text style={styles.loadMoreText}>No more entries to load</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View style={commonStyles.emptyContainer}>
             <Ionicons name="card-outline" size={64} color="#ccc" />
@@ -799,6 +867,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 
