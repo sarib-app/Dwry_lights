@@ -51,6 +51,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
   const [expenses, setExpenses] = useState([]);
   const [referenceData, setReferenceData] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [showBankPicker, setShowBankPicker] = useState(false);
@@ -65,6 +66,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
     { key: 'sales_invoice', label: translate('sales_invoice') },
     { key: 'purchase_invoice', label: translate('purchase_invoice') },
     { key: 'expense', label: translate('expense') },
+    { key: 'customer_balance', label: 'Customer Balance' },
   ];
 
   const paymentMethods = ['Cash', 'Bank Transfer', 'Check', 'Card'];
@@ -319,11 +321,16 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
       case 'expense':
         setReferenceData(expenses);
         break;
+      case 'customer_balance':
+        // For customer_balance, we use customer selector, not reference data
+        setReferenceData([]);
+        break;
       default:
         setReferenceData([]);
     }
-    // Reset reference_id when payment type changes
+    // Reset reference_id and selected customer when payment type changes
     setFormData(prev => ({ ...prev, reference_id: '' }));
+    setSelectedCustomer(null);
   };
 
   // Handle input change
@@ -369,6 +376,29 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
           setFormData(prev => ({ 
             ...prev, 
             recorded_by: '' 
+          }));
+        }
+      }
+    });
+  };
+
+  // Handle customer selection navigation (for customer_balance type)
+  const handleCustomerSelection = () => {
+    navigation.navigate('CustomerSelectorScreen', {
+      selectedCustomerId: selectedCustomer?.id,
+      onCustomerSelect: (customer) => {
+        console.log('Customer selected in callback:', customer);
+        if (customer) {
+          setSelectedCustomer(customer);
+          setFormData(prev => ({ 
+            ...prev, 
+            reference_id: customer.id.toString() 
+          }));
+        } else {
+          setSelectedCustomer(null);
+          setFormData(prev => ({ 
+            ...prev, 
+            reference_id: '' 
           }));
         }
       }
@@ -506,7 +536,11 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
       return false;
     }
     if (!formData.reference_id) {
-      Alert.alert(translate('validationError'), translate('referenceRequired'));
+      if (formData.payment_type === 'customer_balance') {
+        Alert.alert(translate('validationError'), 'Please select a customer');
+      } else {
+        Alert.alert(translate('validationError'), translate('referenceRequired'));
+      }
       return false;
     }
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -518,8 +552,8 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
       return false;
     }
     
-    // Validate credit notes if any are selected
-    if (selectedCreditNotes.length > 0 && !validateCreditNotes()) {
+    // Validate credit notes if any are selected (only for sales_invoice)
+    if (formData.payment_type === 'sales_invoice' && selectedCreditNotes.length > 0 && !validateCreditNotes()) {
       return false;
     }
     
@@ -539,67 +573,105 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
         return;
       }
 
-      // Create FormData for file uploads
-      const formDataToSend = new FormData();
-      formDataToSend.append('bank_id', formData.bank_id.toString());
-      formDataToSend.append('type', formData.type);
-      formDataToSend.append('payment_type', formData.payment_type);
-      formDataToSend.append('reference_id', formData.reference_id.toString());
-      formDataToSend.append('payment_date', formData.payment_date);
-      formDataToSend.append('amount', formData.amount);
-      formDataToSend.append('payment_method', formData.payment_method);
-      formDataToSend.append('transaction_reference', formData.transaction_reference);
-      formDataToSend.append('notes', formData.notes);
-      formDataToSend.append('recorded_by', formData.recorded_by.toString());
+      // For customer_balance type, use simplified JSON payload
+      if (formData.payment_type === 'customer_balance') {
+        const payload = {
+          bank_id: parseInt(formData.bank_id),
+          type: formData.type,
+          payment_type: formData.payment_type,
+          reference_id: parseInt(formData.reference_id), // customer id
+          payment_date: formData.payment_date,
+          amount: parseFloat(formData.amount),
+          payment_method: formData.payment_method,
+          transaction_reference: formData.transaction_reference || '',
+          notes: formData.notes || '',
+          recorded_by: parseInt(formData.recorded_by),
+        };
 
-      // Add credit note fields only if credit notes are applied
-      if (creditNoteApplied > 0) {
-        formDataToSend.append('credit_note_applied', creditNoteApplied.toString());
-        formDataToSend.append('actual_amount', actualAmount.toString());
-        
-        // Convert selected credit notes to JSON string
-        const creditNotesJson = JSON.stringify(selectedCreditNotes);
-        formDataToSend.append('credit_notes', creditNotesJson);
-      }
-
-      // Add image if selected
-      if (formData.image) {
-        formDataToSend.append('image', {
-          uri: formData.image.uri,
-          type: formData.image.type || 'image/jpeg',
-          name: formData.image.fileName || 'image.jpg',
+        const response = await fetch(`${API_BASE_URL}/add_payment_entry`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
         });
-      }
 
-      // Add video if selected
-      if (formData.video) {
-        formDataToSend.append('video', {
-          uri: formData.video.uri,
-          type: formData.video.type || 'video/mp4',
-          name: formData.video.fileName || 'video.mp4',
-        });
-      }
+        const result = await response.json();
+        console.log('Add payment entry response:', result);
 
-      const response = await fetch(`${API_BASE_URL}/add_payment_entry`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formDataToSend,
-      });
-
-      const result = await response.json();
-      console.log('Add payment entry response:', result);
-
-      if (result.status == 200) {
-        Alert.alert(
-          translate('success'),
-          translate('paymentEntryCreatedSuccessfully'),
-          [{ text: translate('ok'), onPress: () => navigation.goBack() }]
-        );
+        if (result.status == 200) {
+          Alert.alert(
+            translate('success'),
+            translate('paymentEntryCreatedSuccessfully'),
+            [{ text: translate('ok'), onPress: () => navigation.goBack() }]
+          );
+        } else {
+          Alert.alert(translate('error'), result.message || translate('failedToCreatePaymentEntry'));
+        }
       } else {
-        Alert.alert(translate('error'), result.message || translate('failedToCreatePaymentEntry'));
+        // For other payment types, use FormData (existing logic)
+        const formDataToSend = new FormData();
+        formDataToSend.append('bank_id', formData.bank_id.toString());
+        formDataToSend.append('type', formData.type);
+        formDataToSend.append('payment_type', formData.payment_type);
+        formDataToSend.append('reference_id', formData.reference_id.toString());
+        formDataToSend.append('payment_date', formData.payment_date);
+        formDataToSend.append('amount', formData.amount);
+        formDataToSend.append('payment_method', formData.payment_method);
+        formDataToSend.append('transaction_reference', formData.transaction_reference);
+        formDataToSend.append('notes', formData.notes);
+        formDataToSend.append('recorded_by', formData.recorded_by.toString());
+
+        // Add credit note fields only if credit notes are applied
+        if (creditNoteApplied > 0) {
+          formDataToSend.append('credit_note_applied', creditNoteApplied.toString());
+          formDataToSend.append('actual_amount', actualAmount.toString());
+          
+          // Convert selected credit notes to JSON string
+          const creditNotesJson = JSON.stringify(selectedCreditNotes);
+          formDataToSend.append('credit_notes', creditNotesJson);
+        }
+
+        // Add image if selected
+        if (formData.image) {
+          formDataToSend.append('image', {
+            uri: formData.image.uri,
+            type: formData.image.type || 'image/jpeg',
+            name: formData.image.fileName || 'image.jpg',
+          });
+        }
+
+        // Add video if selected
+        if (formData.video) {
+          formDataToSend.append('video', {
+            uri: formData.video.uri,
+            type: formData.video.type || 'video/mp4',
+            name: formData.video.fileName || 'video.mp4',
+          });
+        }
+
+        const response = await fetch(`${API_BASE_URL}/add_payment_entry`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'multipart/form-data',
+          },
+          body: formDataToSend,
+        });
+
+        const result = await response.json();
+        console.log('Add payment entry response:', result);
+
+        if (result.status == 200) {
+          Alert.alert(
+            translate('success'),
+            translate('paymentEntryCreatedSuccessfully'),
+            [{ text: translate('ok'), onPress: () => navigation.goBack() }]
+          );
+        } else {
+          Alert.alert(translate('error'), result.message || translate('failedToCreatePaymentEntry'));
+        }
       }
     } catch (error) {
       console.error('Add payment entry error:', error);
@@ -839,42 +911,75 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          <View style={commonStyles.inputGroup}>
-            <Text style={[commonStyles.label, isRTL && commonStyles.arabicText]}>
-              {translate('selectReference')} *
-            </Text>
-            <TouchableOpacity
-              style={commonStyles.selector}
-              onPress={() => setShowReferencePicker(true)}
-              disabled={referenceData.length === 0}
-            >
-              <View style={styles.referenceContent}>
-                {selectedReference ? (
-                  <>
-                    <Text style={[styles.referenceTitle, isRTL && commonStyles.arabicText]}>
-                      {selectedReference.title}
-                    </Text>
-                    {selectedReference.subtitle && (
-                      <Text style={[styles.referenceSubtitle, isRTL && commonStyles.arabicText]}>
-                        {selectedReference.subtitle}
+          {/* Show customer selector for customer_balance type, reference selector for others */}
+          {formData.payment_type === 'customer_balance' ? (
+            <View style={commonStyles.inputGroup}>
+              <Text style={[commonStyles.label, isRTL && commonStyles.arabicText]}>
+                Select Customer *
+              </Text>
+              <TouchableOpacity
+                style={commonStyles.selector}
+                onPress={handleCustomerSelection}
+              >
+                <View style={styles.referenceContent}>
+                  {selectedCustomer ? (
+                    <>
+                      <Text style={[styles.referenceTitle, isRTL && commonStyles.arabicText]}>
+                        {isRTL ? (selectedCustomer.name_ar || selectedCustomer.name) : selectedCustomer.name}
                       </Text>
-                    )}
-                  </>
-                ) : (
-                  <Text style={[commonStyles.placeholder, isRTL && commonStyles.arabicText]}>
-                    {referenceData.length === 0 
-                      ? translate('noReferencesAvailable')
-                      : translate('selectReferencePlaceholder')
-                    }
-                  </Text>
-                )}
-              </View>
-              <Ionicons name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
+                      {selectedCustomer.territory && (
+                        <Text style={[styles.referenceSubtitle, isRTL && commonStyles.arabicText]}>
+                          {selectedCustomer.territory} • {selectedCustomer.customer_type}
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={[commonStyles.placeholder, isRTL && commonStyles.arabicText]}>
+                      Select a customer
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={commonStyles.inputGroup}>
+              <Text style={[commonStyles.label, isRTL && commonStyles.arabicText]}>
+                {translate('selectReference')} *
+              </Text>
+              <TouchableOpacity
+                style={commonStyles.selector}
+                onPress={() => setShowReferencePicker(true)}
+                disabled={referenceData.length === 0}
+              >
+                <View style={styles.referenceContent}>
+                  {selectedReference ? (
+                    <>
+                      <Text style={[styles.referenceTitle, isRTL && commonStyles.arabicText]}>
+                        {selectedReference.title}
+                      </Text>
+                      {selectedReference.subtitle && (
+                        <Text style={[styles.referenceSubtitle, isRTL && commonStyles.arabicText]}>
+                          {selectedReference.subtitle}
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={[commonStyles.placeholder, isRTL && commonStyles.arabicText]}>
+                      {referenceData.length === 0 
+                        ? translate('noReferencesAvailable')
+                        : translate('selectReferencePlaceholder')
+                      }
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* Credit Notes Section - Only show for sales invoices */}
+        {/* Credit Notes Section - Only show for sales invoices (not for customer_balance) */}
         {formData.payment_type === 'sales_invoice' && formData.reference_id && (
           <View style={commonStyles.section}>
             <Text style={[commonStyles.sectionTitle, isRTL && commonStyles.arabicText]}>
@@ -1053,7 +1158,8 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Media Attachments */}
+        {/* Media Attachments - Hide for customer_balance type */}
+        {formData.payment_type !== 'customer_balance' && (
         <View style={commonStyles.section}>
           <Text style={[commonStyles.sectionTitle, isRTL && commonStyles.arabicText]}>
             {translate('attachments')}
@@ -1116,6 +1222,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
             )}
           </View>
         </View>
+        )}
 
 
 

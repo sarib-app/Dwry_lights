@@ -49,6 +49,7 @@ const ActionsScreen = ({navigation}) => {
     // Core Business
     { id: 1, title: 'Items', module: 'items', icon: 'cube', color: '#6B7D3D', category: 'core' },
     { id: 2, title: 'Inventory', module: 'inventory', icon: 'library', color: '#8B5A2B', category: 'core' },
+    { id: 18, title: 'Quick Purchase', module: 'inventory', icon: 'flash', color: '#F39C12', category: 'core', requiresPermission: 'inventory.create' },
     // { id: 3, title: 'Banks', module: 'banks', icon: 'grid', color: '#4A90E2', category: 'core' },
     // { id: 33, title: 'Pemrissions', module: 'permissions', icon: 'grid', color: '#9B98E2', category: 'core' },
 
@@ -73,6 +74,13 @@ const ActionsScreen = ({navigation}) => {
     { id: 13, title: 'Quotations', module: 'quotations', icon: 'document-attach', color: '#2ECC71', category: 'operations' },
   ];
 
+  // Check if user has specific permission
+  const hasPermission = (permissionName) => {
+    return userPermissions.some(permission => 
+      permission.name === permissionName
+    );
+  };
+
   // Filter action items based on permissions
   const getVisibleActionItems = () => {
     // If not role 3 (admin), show all items
@@ -81,7 +89,11 @@ const ActionsScreen = ({navigation}) => {
     }
     // For role 3 (staff), filter by permissions
     return allActionItems.filter(item => {
-      // Check if user has module access permission (e.g., "sales_invoice.management")
+      // If item requires specific permission (like Quick Purchase), check that permission
+      if (item.requiresPermission) {
+        return hasPermission(item.requiresPermission);
+      }
+      // Otherwise, check if user has module access permission (e.g., "sales_invoice.management")
       return simplePermissions.hasModuleAccess(item.module);
     });
   };
@@ -114,6 +126,8 @@ const ActionsScreen = ({navigation}) => {
   const handleActionPress = (actionTitle) => {
     if (actionTitle === 'Inventory') {
       navigation.navigate('InventoryManagement');
+    } else if (actionTitle === 'Quick Purchase') {
+      navigation.navigate('QuickPurchaseScreen');
     } else if (actionTitle === 'Items') {
       navigation.navigate('ItemManagementScreen');
     } else if (actionTitle === 'Customers') {

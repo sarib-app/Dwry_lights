@@ -225,6 +225,15 @@ const CustomerManagementScreen = ({ navigation }) => {
     navigation.navigate('EditCustomer', { customer });
   };
 
+  // Handle set customer balance
+  const handleSetCustomerBalance = (customer) => {
+    if (!canEditCustomers()) {
+      Alert.alert('Access Denied', 'You do not have permission to update customer balance');
+      return;
+    }
+    navigation.navigate('SetCustomerBalance', { customer });
+  };
+
   // Handle add customer
   const handleAddCustomer = () => {
     if (!canCreateCustomers()) {
@@ -284,12 +293,20 @@ const CustomerManagementScreen = ({ navigation }) => {
         </View>
         <View style={styles.customerActions}>
           {canEditCustomers() && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.editButton]}
-              onPress={() => handleEditCustomer(customer)}
-            >
-              <Ionicons name="pencil" size={16} color="#6B7D3D" />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.balanceButton]}
+                onPress={() => handleSetCustomerBalance(customer)}
+              >
+                <Ionicons name="wallet" size={16} color="#2C3E50" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.editButton]}
+                onPress={() => handleEditCustomer(customer)}
+              >
+                <Ionicons name="pencil" size={16} color="#6B7D3D" />
+              </TouchableOpacity>
+            </>
           )}
           {canDeleteCustomers() && (
             <TouchableOpacity
@@ -318,9 +335,27 @@ const CustomerManagementScreen = ({ navigation }) => {
           </Text>
         </View>
         <View style={styles.detailRow}>
-          <View style={[styles.typeIndicator, { backgroundColor: getCustomerTypeColor(customer.customer_type) }]} />
+          <View
+            style={[
+              styles.typeIndicator,
+              { backgroundColor: getCustomerTypeColor(customer.customer_type) },
+            ]}
+          />
           <Text style={styles.detailText}>{customer.customer_type || 'No type'}</Text>
         </View>
+      </View>
+
+      {/* Balance detail */}
+      <View style={styles.balanceRow}>
+        <Ionicons name="wallet" size={16} color="#2C3E50" />
+        <Text style={styles.balanceText}>
+          Balance:{' '}
+          <Text style={styles.balanceAmount}>
+            {customer.balance !== undefined && customer.balance !== null
+              ? customer.balance
+              : 'N/A'}
+          </Text>
+        </Text>
       </View>
 
       {customer.address_contact && (
@@ -719,6 +754,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  balanceButton: {
+    backgroundColor: 'rgba(44, 62, 80, 0.1)',
+  },
   actionButton: {
     width: 36,
     height: 36,
@@ -757,6 +795,21 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     marginRight: 6,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  balanceText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#444',
+    fontWeight: '500',
+  },
+  balanceAmount: {
+    fontWeight: '700',
+    color: '#2C3E50',
   },
   customerAddress: {
     fontSize: 14,

@@ -14,6 +14,7 @@ import EditInventoryScreen from '../Inventory/InventroyScreen';
 import CustomerManagementScreen from '../CustomerManagment/CustomerManagment';
 import AddCustomerScreen from '../CustomerManagment/AddCustomer';
 import EditCustomerScreen from '../CustomerManagment/EditCustomer';
+import SetCustomerBalanceScreen from '../CustomerManagment/SetCustomerBalance';
 import SupplierManagementScreen from '../SupplierManagment/SupplierManagmentScreen';
 import AddSupplierScreen from '../SupplierManagment/AddSupplierScreen';
 import EditSupplierScreen from '../SupplierManagment/EditSupplierScreen';
@@ -62,6 +63,7 @@ import ReturnInvoiceListScreen from '../ReturnInvoice/ReturnInvoiceList';
 import AddReturnInvoiceScreen from '../ReturnInvoice/AddReturnInvoice';
 import ReturnInvoiceDetailsScreen from '../ReturnInvoice/ReturnInvoiceDetails';
 import PermissionManagerScreen from '../UserManagmentScreen.js/PemrissionManager';
+import QuickPurchaseScreen from '../PurchaseOrder/QuickPurchaseScreen';
 
 const Stack = createStackNavigator();
 
@@ -83,6 +85,7 @@ const AuthStack = () => {
        <Stack.Screen name="CustomerManagement" component={CustomerManagementScreen} options={{ headerShown: false }} />
        <Stack.Screen name="AddCustomer" component={AddCustomerScreen} options={{ headerShown: false }}  /> 
        <Stack.Screen name="EditCustomer" component={EditCustomerScreen} options={{ headerShown: false }} />
+       <Stack.Screen name="SetCustomerBalance" component={SetCustomerBalanceScreen} options={{ headerShown: false }} />
 
 <Stack.Screen name="SupplierManagement" component={SupplierManagementScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddSupplier" component={AddSupplierScreen} options={{ headerShown: false }} />
@@ -139,6 +142,8 @@ const AuthStack = () => {
 <Stack.Screen name="AddEditUserScreen" component={AddEditUserScreen} options={{ headerShown: false }} />
 
 <Stack.Screen name="POSelectorScreen" component={POSelectorScreen} options={{ headerShown: false }} />
+
+<Stack.Screen name="QuickPurchaseScreen" component={QuickPurchaseScreen} options={{ headerShown: false }} />
 
 <Stack.Screen name="PurchaseInvoiceListScreen" component={PurchaseInvoiceListScreen} options={{ headerShown: false }} />
 <Stack.Screen name="AddPurchaseInvoice" component={AddPurchaseInvoiceScreen} options={{ headerShown: false }} />
