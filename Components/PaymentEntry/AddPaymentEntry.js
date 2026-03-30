@@ -45,6 +45,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
   const [actualAmount, setActualAmount] = useState(0);
   const [creditNoteApplied, setCreditNoteApplied] = useState(0);
   const [loadingCreditNotes, setLoadingCreditNotes] = useState(false);
+  const [effectCustomerBalance, setEffectCustomerBalance] = useState(true);
 
   const [banks, setBanks] = useState([]);
   const [salesInvoices, setSalesInvoices] = useState([]);
@@ -586,6 +587,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
           transaction_reference: formData.transaction_reference || '',
           notes: formData.notes || '',
           recorded_by: parseInt(formData.recorded_by),
+          with_sale_invoice: formData.payment_type === 'sales_invoice' ? (effectCustomerBalance ? 1 : 0) : 0,
         };
 
         const response = await fetch(`${API_BASE_URL}/add_payment_entry`, {
@@ -622,6 +624,7 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
         formDataToSend.append('transaction_reference', formData.transaction_reference);
         formDataToSend.append('notes', formData.notes);
         formDataToSend.append('recorded_by', formData.recorded_by.toString());
+        formDataToSend.append('with_sale_invoice', formData.payment_type === 'sales_invoice' ? (effectCustomerBalance ? '1' : '0') : '0');
 
         // Add credit note fields only if credit notes are applied
         if (creditNoteApplied > 0) {
@@ -910,6 +913,47 @@ const AddPaymentEntryScreen = ({ navigation, route }) => {
               ))}
             </View>
           </View>
+
+          {/* Effect Customer Balance Toggle - Only show for sales_invoice */}
+          {formData.payment_type === 'sales_invoice' && (
+            <View style={commonStyles.inputGroup}>
+              <Text style={[commonStyles.label, isRTL && commonStyles.arabicText]}>
+                Effect Customer Balance
+              </Text>
+              <View style={styles.toggleContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleOption,
+                    !effectCustomerBalance && styles.toggleOptionActive
+                  ]}
+                  onPress={() => setEffectCustomerBalance(false)}
+                >
+                  <Text style={[
+                    styles.toggleText,
+                    !effectCustomerBalance && styles.toggleTextActive,
+                    isRTL && commonStyles.arabicText
+                  ]}>
+                    No
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleOption,
+                    effectCustomerBalance && styles.toggleOptionActive
+                  ]}
+                  onPress={() => setEffectCustomerBalance(true)}
+                >
+                  <Text style={[
+                    styles.toggleText,
+                    effectCustomerBalance && styles.toggleTextActive,
+                    isRTL && commonStyles.arabicText
+                  ]}>
+                    Yes
+                </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Show customer selector for customer_balance type, reference selector for others */}
           {formData.payment_type === 'customer_balance' ? (
@@ -1399,18 +1443,50 @@ const styles = StyleSheet.create({
   methodOptionActive: {
     backgroundColor: '#6B7D3D',
   },
-  
+
   methodText: {
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
   },
-  
+
   methodTextActive: {
     color: '#fff',
     fontWeight: '600',
   },
-  
+
+  toggleContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  toggleOption: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+
+  toggleOptionActive: {
+    backgroundColor: '#6B7D3D',
+    borderColor: '#6B7D3D',
+  },
+
+  toggleText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+
+  toggleTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
   referenceContent: {
     flex: 1,
   },
